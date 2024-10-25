@@ -1,1 +1,1 @@
-sudo apt-get install libfuse-dev qtbase5-dev
+sudo apt install -y libfuse-dev
