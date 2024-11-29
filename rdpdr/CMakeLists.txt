@@ -10,6 +10,9 @@ set(${MODULE_NAME}_SRCS
 	rdpdr.cpp
 	rdpdrchannelserver.cpp
 	rdpdrchannelserver.h
+	smartcard/smartcard_operations.h
+	smartcard/smartcard_operations.cpp
+	smartcard/QByteArrayWriteInteger.h
         )
 
 add_executable(${MODULE_NAME} ${${MODULE_NAME}_SRCS})

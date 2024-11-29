@@ -77,6 +77,8 @@ void initializeLogging(unsigned wlogAppenderType) {
 		goto fail;
 	}
 
+	WLog_SetLogLevel(wlog_root, WLOG_TRACE);
+
 	return;
 fail:
 	exit(1);
@@ -129,6 +131,7 @@ int main(int argc, char **argv) {
 	}
 
 	initializeLogging(wlogAppenderType);
+
 
 	CWLOG_INF(TAG, "rdpdr launching at %s", QCSTR(QDateTime::currentDateTime().toString()));
 
