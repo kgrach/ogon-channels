@@ -43,6 +43,14 @@ public:
 		mRequiredLengthError = 0;
 	}
 
+	RdpStreamBuffer(QByteArray& buf) {
+		mStream = new QDataStream(&mBuffer, QIODevice::ReadWrite);
+		mStream->setByteOrder(QDataStream::LittleEndian);
+		mLength = 0;
+		mRequiredLengthError = 0;
+		mBuffer = buf;
+	}
+
 	~RdpStreamBuffer() {
 		delete mStream;
 	}

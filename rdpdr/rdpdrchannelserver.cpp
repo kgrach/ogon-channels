@@ -27,6 +27,8 @@
 #include <QHash>
 #include <QMutexLocker>
 #include <QtEndian>
+#include <sys/ioctl.h>
+#include "smartcard_driver/UsbConfig.h"
 #include "rdpdrchannelserver.h"
 
 #include <errno.h>
@@ -1094,11 +1096,15 @@ bool RDPDrChannelServer::addSmartCardDevice(RdpDrDevice *device) {
 		return false;
 	}
 
-	SmartCardThread *sct = new SmartCardThread(this, device);
-	connect(sct, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
-	device->context = sct;
+	// SmartCardDeviceThread *scardDevThread = new SmartCardDeviceThread();
+	// connect(scardDevThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
+	// scardDevThread->start();
+
+	SmartCardOperationsThread *scardOpThread = new SmartCardOperationsThread(this, device);
+	connect(scardOpThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
+	device->context = scardOpThread;
 	device->disabled = false;
-	sct->start();
+	scardOpThread->start();
 	
 	return true;
 }
@@ -2367,13 +2373,40 @@ int RDPDrChannelServer::FuseThread::convertNtStatus(quint32 ntstatus) {
 
 
 //============================ SMARTCARD =====================================
-RDPDrChannelServer::SmartCardThread::SmartCardThread(RDPDrChannelServer *pChannel, RdpDrDevice *device)
+
+RDPDrChannelServer::SmartCardDeviceThread::SmartCardDeviceThread() : request(8){}
+RDPDrChannelServer::SmartCardDeviceThread::~SmartCardDeviceThread(){}
+void RDPDrChannelServer::SmartCardDeviceThread::run() {
+	QMutexLocker lock(&mScardLoopLock);	
+
+	fd = open("/dev/vusb1", O_RDWR);
+
+	int res = ioctl(fd, 0, 0);
+
+	while(1) {
+		
+		ssize_t size;
+	
+		size = read(fd, request.data(), 8);
+
+		if(!size) {
+			msleep(100); // 100 ms
+			continue;
+		}
+
+		response = GetResponse(request);
+	    
+		size = write(fd, response.data(), response.size());
+	}
+}
+
+RDPDrChannelServer::SmartCardOperationsThread::SmartCardOperationsThread(RDPDrChannelServer *pChannel, RdpDrDevice *device)
 	: QThread()
 	, mDevice(device)
 	, mVirtualChannel(pChannel)
 {}
 
-RDPDrChannelServer::SmartCardThread::~SmartCardThread() {
+RDPDrChannelServer::SmartCardOperationsThread::~SmartCardOperationsThread() {
 	// /* Wait for the event loop thread to terminate */
 	// QMutexLocker lock(&mFuseLoopLock);
 	// /* destroy the FUSE handle, must be called after fuse_unmount */
@@ -2382,10 +2415,10 @@ RDPDrChannelServer::SmartCardThread::~SmartCardThread() {
 	// }
 }
 
-void RDPDrChannelServer::SmartCardThread::run() {
+void RDPDrChannelServer::SmartCardOperationsThread::run() {
 	QMutexLocker lock(&mScardLoopLock);
 
-	CWLOG_DBG(TAG, "SmartCardThread::run() in !!!!!!");
+	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() in !!!!!!");
 
 	quint32 ntStatus = STATUS_SUCCESS;
 	
@@ -2398,14 +2431,11 @@ void RDPDrChannelServer::SmartCardThread::run() {
 
 	CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
 
-
-//	EstablishContext_Call();
-
-	CWLOG_DBG(TAG, "SmartCardThread::run() out !!!!!!");
+	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() out !!!!!!");
 }
 
 
-quint32 RDPDrChannelServer::SmartCardThread::createHandle(std::shared_ptr<smartcardIOControl_Call> ioControlCall_ptr)
+quint32 RDPDrChannelServer::SmartCardOperationsThread::createHandle(std::shared_ptr<smartcardIOControl_Call> ioControlCall_ptr)
 {
 	/* See http://msdn.microsoft.com/en-us/library/bb432380(v=vs.85).aspx */
 
@@ -2416,7 +2446,6 @@ quint32 RDPDrChannelServer::SmartCardThread::createHandle(std::shared_ptr<smartc
 	request.ioControlCode = ioControlCall_ptr->getIoControlCode();
 	request.outputBufferLength = ioControlCall_ptr->getOutputBufferLength();
 	request.buffer.append(ioControlCall_ptr->getInputBuffer());
-//	request.buffer.append(QByteArray::fromHex("0xBFAAF040"));
 
 	if (!(response = (DeviceControlResponse*)mVirtualChannel->sendSynchronousDeviceRequest(request))) {
 		CWLOG_ERR(TAG, "error: createHandle failed to retrieve device response");
@@ -2427,11 +2456,13 @@ quint32 RDPDrChannelServer::SmartCardThread::createHandle(std::shared_ptr<smartc
 		CWLOG_DBG(TAG, "error: createHandle failed with status 0x%08X", ntStatus);
 	}
 
+	ioControlCall_ptr->setResponse(response->buffer);
+
 	delete(response);
 	return ntStatus;
 }
 /*
-quint32 RDPDrChannelServer::SmartCardThread::closeHandle(quint32 &fileId)
+quint32 RDPDrChannelServer::SmartCardOperationsThread::closeHandle(quint32 &fileId)
 {
 	quint32 ntstatus = STATUS_UNSUCCESSFUL;
 	DeviceCloseResponse *response = NULL;
@@ -2446,7 +2477,7 @@ quint32 RDPDrChannelServer::SmartCardThread::closeHandle(quint32 &fileId)
 	return ntstatus;
 }
 
-int RDPDrChannelServer::SmartCardThread::templateForScardEvents_Call(quint32 ioControlCode, quint32 outBuffLength){
+int RDPDrChannelServer::SmartCardOperationsThread::templateForScardEvents_Call(quint32 ioControlCode, quint32 outBuffLength){
 	quint32 ntStatus = STATUS_SUCCESS;
 	
 	if ((ntStatus = createHandle(ioControlCode, outBuffLength)))
@@ -2456,17 +2487,17 @@ int RDPDrChannelServer::SmartCardThread::templateForScardEvents_Call(quint32 ioC
 	return convertNtStatus(ntStatus);
 }
 
-int RDPDrChannelServer::SmartCardThread::ScardAccessStartedEvent_Call(){
+int RDPDrChannelServer::SmartCardOperationsThread::ScardAccessStartedEvent_Call(){
 
 	return templateForScardEvents_Call(SCARD_IOCTL_ACCESSSTARTEDEVENT, 256);
 }
-int RDPDrChannelServer::SmartCardThread::EstablishContext_Call(){
+int RDPDrChannelServer::SmartCardOperationsThread::EstablishContext_Call(){
 //	EstablishContext_Call establishCxt();
 	
 	return templateForScardEvents_Call(SCARD_IOCTL_ESTABLISHCONTEXT, 256);
 }
 */
-int RDPDrChannelServer::SmartCardThread::convertNtStatus(quint32 ntstatus) {
+int RDPDrChannelServer::SmartCardOperationsThread::convertNtStatus(quint32 ntstatus) {
 // TODO: Переделать конвертацию для смарткарт	
 	switch (ntstatus >> 30) {
 		case STATUS_SEVERITY_SUCCESS:		/* 0x0xxxxxxx */

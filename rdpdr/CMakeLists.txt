@@ -13,7 +13,10 @@ set(${MODULE_NAME}_SRCS
 	smartcard/smartcard_operations.h
 	smartcard/smartcard_operations.cpp
 	smartcard/QByteArrayWriteInteger.h
-        )
+	smartcard_driver/UsbConfig.h
+	smartcard_driver/UsbConfig.cpp
+	smartcard/smartcard_message.h
+    )
 
 add_executable(${MODULE_NAME} ${${MODULE_NAME}_SRCS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${QT_EXECUTEABLE_FLAGS}")

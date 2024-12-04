@@ -2,36 +2,9 @@
 #include "QByteArrayWriteInteger.h"
 //#include <freerdp/channels/rdpdr.h>
 #include <ogon-channels/logging.h>
+//#include <qdatastream.h>
 
 #define TAG CWLOG_TAG("rdpdr_SCARD")
-
-quint32 smartcardIOControl_Call::getPadding(QByteArray& bufPadding, quint32 size, quint32 alignment){
-	quint32 pad;
-	pad = size;
-	size = (size + alignment - 1) & ~(alignment - 1);
-	pad = size - pad;
-
-	if (pad){
-		bufPadding.fill('\0', pad);
-	}
-
-	return pad;
-}
-
-void smartcardIOControl_Call::packCommonTypeHeader(QByteArray& buf){
-	/* See MS-RPCE */
-	quint8 version = 1; 			/* Version (1 byte) */
-	quint8 endianness = 0x10;		/* Endianness (1 byte) 0x10 - Little-endian; 0x00 - Big-endian. Remmina использует только Little-endian*/
-	quint16 commonHeaderLength = 8; /* CommonHeaderLength (2 bytes) */
-	quint32 filler = 0xCCCCCCCC; 	/* Filler (4 bytes), should be 0xCCCCCCCC */
-	buf << version << endianness << commonHeaderLength << filler;
-}
-
-void smartcardIOControl_Call::packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength){
-	quint32 filler = 0x00000000; /* Filler (4 bytes), should be 0x00000000 */
-	buf << objectBufferLength << filler;
-}
-
 
 const char* smartcardIOControl_Call::getIOctlString(bool funcName){
 	switch (_ioControlCode)
@@ -187,18 +160,198 @@ const char* smartcardIOControl_Call::getIOctlString(bool funcName){
 	return funcName ? "SCardUnknown" : "SCARD_IOCTL_UNKNOWN";
 }
 
-//========================================================================================================
+quint32 smartcardIOControl_Call::getPadding(QByteArray& bufPadding, quint32 size, quint32 alignment){
+	quint32 pad;
+	pad = size;
+	size = (size + alignment - 1) & ~(alignment - 1);
+	pad = size - pad;
+
+	if (pad){
+		bufPadding.fill('\0', pad);
+	}
+
+	return pad;
+}
+
+void smartcardIOControl_Call::packCommonTypeHeader(QByteArray& buf){
+	/* See MS-RPCE */
+	quint8 version = 1; 			/* Version (1 byte) */
+	quint8 endianness = 0x10;		/* Endianness (1 byte) 0x10 - Little-endian; 0x00 - Big-endian. Remmina использует только Little-endian*/
+	quint16 commonHeaderLength = 8; /* CommonHeaderLength (2 bytes) */
+	quint32 filler = 0xCCCCCCCC; 	/* Filler (4 bytes), should be 0xCCCCCCCC */
+	buf << version << endianness << commonHeaderLength << filler;
+}
+
+void smartcardIOControl_Call::packPrivateTypeHeader(QByteArray& buf, 
+		quint32 objectBufferLength){  	/* objectBufferLength (4 bytes) including padding length)*/
+	quint32 filler = 0x00000000; 		/* Filler (4 bytes), should be 0x00000000 */
+	buf << objectBufferLength << filler;
+}
+
+qint32 smartcardIOControl_Call::unpackCommonTypeHeader(int size, QDataStream& buf){
+	quint8 version; 			/* Version (1 byte), should be 1 */
+	quint8 endianness;			/* Endianness (1 byte) 0x10 - Little-endian; 0x00 - Big-endian. Remmina использует только Little-endian*/
+	quint16 commonHeaderLength; /* CommonHeaderLength (2 bytes), should be 8 */
+	quint32 filler; 			/* Filler (4 bytes), should be 0xCCCCCCCC */
+
+	if (size < SMARTCARD_COMMON_TYPE_HEADER_LENGTH) {
+		CWLOG_WRN(TAG, "CommonTypeHeader is too short: %" PRIuz "", size);
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+	// QDataStream ds(buf);
+	// ds.setByteOrder(QDataStream::LittleEndian);
+
+	// ds >> version;
+	// ds >> endianness;
+	// ds >> commonHeaderLength;
+	// ds >> filler;
+
+	buf >> version;
+	buf >> endianness;
+	buf >> commonHeaderLength;
+	buf >> filler;
+
+	if (version != 1)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader Version %" PRIu8 "", version);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (endianness != 0x10)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader Endianness %" PRIu8 "", endianness);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (commonHeaderLength != 8)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader CommonHeaderLength %" PRIu16 "", commonHeaderLength);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (filler != 0xCCCCCCCC)
+	{
+		CWLOG_WRN(TAG, "Unexpected CommonTypeHeader Filler 0x%08" PRIX32 "", filler);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	return SCARD_S_SUCCESS;
+}
+
+qint32 smartcardIOControl_Call::unpackPrivateTypeHeader(int size, QDataStream& buf){
+
+	if (size < (SMARTCARD_COMMON_TYPE_HEADER_LENGTH + SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH)) {
+		CWLOG_WRN(TAG, "PrivateTypeHeader is too short: %" PRIuz "", size);
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+
+	quint32 objectBufferLength;  	/* objectBufferLength (4 bytes) including padding length)*/
+	quint32 filler;			 		/* Filler (4 bytes), should be 0x00000000 */
+
+	buf >> objectBufferLength;
+	buf >> filler;
+
+	if (filler != 0x00000000)
+	{
+		CWLOG_WRN(TAG, "Unexpected PrivateTypeHeader Filler 0x%08" PRIX32 "", filler);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	auto remaining = size + SMARTCARD_COMMON_TYPE_HEADER_LENGTH - buf.device()->pos();
+	if (objectBufferLength != remaining)
+	{
+		CWLOG_WRN(TAG,
+		          "PrivateTypeHeader ObjectBufferLength mismatch: Actual: %" PRIu32 ", Expected: %" PRIuz "",
+		          objectBufferLength, remaining);
+		return STATUS_INVALID_PARAMETER;
+	}
+	
+	return SCARD_S_SUCCESS;
+}
+
+
+qint32 smartcardIOControl_Call::unpackCommonTypeHeader(RdpStreamBuffer& rsBuf){
+	quint8 version; 			/* Version (1 byte), should be 1 */
+	quint8 endianness;			/* Endianness (1 byte) 0x10 - Little-endian; 0x00 - Big-endian. Remmina использует только Little-endian*/
+	quint16 commonHeaderLength; /* CommonHeaderLength (2 bytes), should be 8 */
+	quint32 filler; 			/* Filler (4 bytes), should be 0xCCCCCCCC */
+
+	if (!rsBuf.verifyRemainingLength(SMARTCARD_COMMON_TYPE_HEADER_LENGTH)) {
+		CWLOG_WRN(TAG, "CommonTypeHeader is too short: %" PRIuz "", rsBuf.remainingLength());
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+	
+	rsBuf >> version;
+	rsBuf >> endianness;
+	rsBuf >> commonHeaderLength;
+	rsBuf >> filler;
+
+	if (version != 1)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader Version %" PRIu8 "", version);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (endianness != 0x10)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader Endianness %" PRIu8 "", endianness);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (commonHeaderLength != 8)
+	{
+		CWLOG_WRN(TAG, "Unsupported CommonTypeHeader CommonHeaderLength %" PRIu16 "", commonHeaderLength);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (filler != 0xCCCCCCCC)
+	{
+		CWLOG_WRN(TAG, "Unexpected CommonTypeHeader Filler 0x%08" PRIX32 "", filler);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	return SCARD_S_SUCCESS;
+}
+qint32 smartcardIOControl_Call::unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, 
+	quint32& objectBufferLength){  	/* objectBufferLength (4 bytes) including padding length)*/
+	quint32 filler;			 		/* Filler (4 bytes), should be 0x00000000 */
+
+	if (!rsBuf.verifyRemainingLength(SMARTCARD_COMMON_TYPE_HEADER_LENGTH + SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH)) {
+		CWLOG_WRN(TAG, "PrivateTypeHeader is too short: %" PRIuz "", rsBuf.remainingLength());
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+
+	rsBuf >> objectBufferLength;
+	rsBuf >> filler;
+
+	if (filler != 0x00000000)
+	{
+		CWLOG_WRN(TAG, "Unexpected PrivateTypeHeader Filler 0x%08" PRIX32 "", filler);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (objectBufferLength != rsBuf.remainingLength())
+	{
+		CWLOG_WRN(TAG,
+		          "PrivateTypeHeader ObjectBufferLength mismatch: Actual: %" PRIu32 ", Expected: %" PRIuz "",
+		          objectBufferLength, rsBuf.remainingLength());
+		return STATUS_INVALID_PARAMETER;
+	}
+	
+	return SCARD_S_SUCCESS;
+}
+
 //========================================================================================================
 //========================================================================================================
 
-ScardAccessStartedEvent_Call::ScardAccessStartedEvent_Call(){
+ScardAccessStartedEvent_Call::ScardAccessStartedEvent_Call() {
 	_ioControlCode = SCARD_IOCTL_ACCESSSTARTEDEVENT;
-	_outputBufferLength = 256;
+	_outputBufferLength = 2048;
 	_inputBuffer.append(QByteArray::fromHex("00000000")); // в обратном порядке
 //	_inputBuffer.append(QByteArray::fromHex("40F0AABF")); // в обратном порядке
 }
 
-EstablishContext_Call::EstablishContext_Call(){
+EstablishContext_Call::EstablishContext_Call() {
 	quint32 objectBufferLength = 0;
 	QByteArray padding;
 	_ioControlCode = SCARD_IOCTL_ESTABLISHCONTEXT;
@@ -215,3 +368,22 @@ EstablishContext_Call::EstablishContext_Call(){
 	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
 }
 
+
+void EstablishContext_Call::setResponse(QByteArray& buf){
+	quint32 objectBufferLength;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		return;
+	}
+_response._returnCode = 8;
+	rsb >> _response._returnCode;
+	_response._hContext = QByteArray(rsb.pointer(), objectBufferLength);
+
+}

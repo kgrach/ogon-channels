@@ -4,6 +4,10 @@
 #include <winpr/smartcard.h>
 #include <qglobal.h>
 #include <qbytearray.h>
+#include <ogon-channels/qt/rdpstreambuffer.h>
+
+
+#include "smartcard_message.h"
 
 #define RDPDR_DEVICE_IO_REQUEST_LENGTH		24
 #define RDPDR_DEVICE_IO_RESPONSE_LENGTH		16
@@ -80,21 +84,31 @@ protected:
 	quint32 	_ioControlCode{0};
 	QByteArray 	_inputBuffer;
 	quint32 	_outputBufferLength{0};
+
+
+
+	void packCommonTypeHeader(QByteArray& buf);
+	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
+	qint32 unpackCommonTypeHeader(int size, QDataStream& buf);
+	qint32 unpackPrivateTypeHeader(int size, QDataStream& buf);
+	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
+	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
 public:
 	virtual ~smartcardIOControl_Call() noexcept = default;
 
 	/*
 	*  getPadding - вернет размер наполнителя и заполнит нулями сам напонитель 
 	* 	size - размер буфера в который нужно добавить наполнитель (Padding), например _inputBuffer
+	* 	alignment - выравнивание для padding'а
 	*/
 	quint32 getPadding(QByteArray& bufPadding, quint32 size, quint32 alignment = 8);
 	const char* getIOctlString(bool funcName); // вернет строковое название ioControlCode
 
-	void packCommonTypeHeader(QByteArray& buf);
-	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
 	virtual quint32 getIoControlCode() { return _ioControlCode; }
 	virtual quint32 getOutputBufferLength() { return _outputBufferLength; }
 	virtual const QByteArray& getInputBuffer() const { return _inputBuffer; }
+
+	virtual void setResponse(QByteArray& buf) = 0;
 };
 
 class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
@@ -102,6 +116,7 @@ class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
 public:
 	ScardAccessStartedEvent_Call();
 	virtual ~ScardAccessStartedEvent_Call() noexcept = default;
+	void setResponse(QByteArray& buf) override {};
 };
 
 class EstablishContext_Call : public smartcardIOControl_Call
@@ -113,8 +128,12 @@ class EstablishContext_Call : public smartcardIOControl_Call
 	};
 //	Handles_Call handles;
 	quint32 _dwScope;
+	EstablishContext_Return _response;
 
 public:
 	EstablishContext_Call();
 	virtual ~EstablishContext_Call() noexcept = default;
+	void setResponse(QByteArray& buf) override;
 };
+
+

@@ -2503,14 +2503,14 @@ public:
 		}
 	};
 
-	class SmartCardThread : public QThread {
+	class SmartCardOperationsThread : public QThread {
 	private:
 		
 		RdpDrDevice*        mDevice;
 		
 		RDPDrChannelServer* mVirtualChannel;
 		QMutex              mScardLoopLock;
-		QMutex              mIoLock;
+//		QMutex              mIoLock;
 
 		int     convertNtStatus(quint32 ntstatus);
 
@@ -2520,12 +2520,25 @@ public:
 		void run();
 
 	public:
-		SmartCardThread(RDPDrChannelServer* pChannel, RdpDrDevice* device);
-		~SmartCardThread();
+		SmartCardOperationsThread(RDPDrChannelServer* pChannel, RdpDrDevice* device);
+		~SmartCardOperationsThread();
+	};
 
-		// int templateForScardEvents_Call(quint32 ioControlCode, quint32 outBuffLength);
-		// int ScardAccessStartedEvent_Call();
-		// int EstablishContext_Call();
+
+	// Создание и управление USB-устройством в файловой системе
+	class SmartCardDeviceThread : public QThread {
+	private:
+		int fd;
+		std::vector<unsigned char> request;
+		std::vector<unsigned char> response;
+		QMutex              mScardLoopLock;
+//		QMutex              mIoLock;
+
+		void run();
+
+	public:
+		SmartCardDeviceThread();
+		~SmartCardDeviceThread();
 	};
 
 	bool mountDevice(RdpDrDevice* device);
