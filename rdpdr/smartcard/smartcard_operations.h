@@ -109,6 +109,9 @@ public:
 	virtual const QByteArray& getInputBuffer() const { return _inputBuffer; }
 
 	virtual void setResponse(QByteArray& buf) = 0;
+	virtual qint64 getReturnCode() const = 0;
+	virtual const QByteArray& getReturnContext() const = 0;
+	virtual const QByteArray& getReturnReverseContext() const = 0;
 };
 
 class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
@@ -116,7 +119,10 @@ class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
 public:
 	ScardAccessStartedEvent_Call();
 	virtual ~ScardAccessStartedEvent_Call() noexcept = default;
-	void setResponse(QByteArray& buf) override {};
+	void setResponse(QByteArray& buf) override {}
+	qint64 getReturnCode() const override {return 0; }
+	const QByteArray& getReturnContext() const override {}
+	const QByteArray& getReturnReverseContext() const override {}
 };
 
 class EstablishContext_Call : public smartcardIOControl_Call
@@ -134,6 +140,14 @@ public:
 	EstablishContext_Call();
 	virtual ~EstablishContext_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override;
+	qint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnContext() const override {return _response._hContext._pbContext;}
+	const QByteArray& getReturnReverseContext() const override {return _response._hContext._pbContextReverse;}
 };
 
+class ListReaders_Call :  public smartcardIOControl_Call {
+	// enum mszGroup {
+	// 	SCARD_IOCTL_LISTREADERSA
+	// }
+};
 

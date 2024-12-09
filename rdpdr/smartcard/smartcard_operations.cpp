@@ -316,7 +316,7 @@ qint32 smartcardIOControl_Call::unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf,
 	quint32& objectBufferLength){  	/* objectBufferLength (4 bytes) including padding length)*/
 	quint32 filler;			 		/* Filler (4 bytes), should be 0x00000000 */
 
-	if (!rsBuf.verifyRemainingLength(SMARTCARD_COMMON_TYPE_HEADER_LENGTH + SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH)) {
+	if (!rsBuf.verifyRemainingLength(SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH)) {
 		CWLOG_WRN(TAG, "PrivateTypeHeader is too short: %" PRIuz "", rsBuf.remainingLength());
 		return STATUS_BUFFER_TOO_SMALL;
 	}
@@ -371,6 +371,8 @@ EstablishContext_Call::EstablishContext_Call() {
 
 void EstablishContext_Call::setResponse(QByteArray& buf){
 	quint32 objectBufferLength;
+	quint64 offset = 0; // в дампе памяти между размерностью контекста (_response._hContext._cbContext) и контекстом _response._hContext._pbContext) какие-то 8 байт. 
+						// Пока не понял, что это за данные. В док-ции написано cbContext от 0 до 16 байт. См. MS-RDPESC 2.2.1.1
 	RdpStreamBuffer rsb(buf);
 	rsb.sealLength(buf.size());
 
@@ -382,8 +384,14 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 	if(res != SCARD_S_SUCCESS){
 		return;
 	}
-_response._returnCode = 8;
-	rsb >> _response._returnCode;
-	_response._hContext = QByteArray(rsb.pointer(), objectBufferLength);
 
+	rsb >> _response._returnCode;
+	rsb >> _response._hContext._cbContext;
+	rsb >> offset;
+
+	auto startContext = rsb.pointer();
+	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hContext._cbContext) - sizeof(offset);
+	_response._hContext._pbContext = QByteArray(startContext, endContext); 
+	_response._hContext._pbContextReverse = _response._hContext._pbContext;
+	std::reverse(_response._hContext._pbContextReverse.begin(), _response._hContext._pbContextReverse.end());
 }

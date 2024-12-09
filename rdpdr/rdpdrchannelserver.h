@@ -2514,14 +2514,15 @@ public:
 
 		int     convertNtStatus(quint32 ntstatus);
 
-		quint32 createHandle(std::shared_ptr<smartcardIOControl_Call> ioControlCall_ptr);
-		quint32 closeHandle(quint32& fileId);
+//		quint32 closeHandle(quint32& fileId);
 
-		void run();
+		void run() override;
 
 	public:
 		SmartCardOperationsThread(RDPDrChannelServer* pChannel, RdpDrDevice* device);
 		~SmartCardOperationsThread();
+		quint32 createHandle(std::shared_ptr<smartcardIOControl_Call> ioControlCall_ptr);
+
 	};
 
 

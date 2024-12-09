@@ -29,7 +29,9 @@
 #include <QtEndian>
 #include <sys/ioctl.h>
 #include "smartcard_driver/UsbConfig.h"
+#include "smartcard_driver/thrift.h"
 #include "rdpdrchannelserver.h"
+#include "global_vars.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -1096,16 +1098,22 @@ bool RDPDrChannelServer::addSmartCardDevice(RdpDrDevice *device) {
 		return false;
 	}
 
-	// SmartCardDeviceThread *scardDevThread = new SmartCardDeviceThread();
-	// connect(scardDevThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
-	// scardDevThread->start();
-
+	
+// 1 сначала запускаем thrift
 	SmartCardOperationsThread *scardOpThread = new SmartCardOperationsThread(this, device);
 	connect(scardOpThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
 	device->context = scardOpThread;
 	device->disabled = false;
 	scardOpThread->start();
 	
+	globalRDPDrChannelSmartCard = this;
+	globalRdpDrDeviceSmartCard = device;
+	globalSmartCardOperationsThread = scardOpThread;
+
+// 2 затем запускаем виртуальное устройство
+	// SmartCardDeviceThread *scardDevThread = new SmartCardDeviceThread();
+	// connect(scardDevThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
+	// scardDevThread->start(); 
 	return true;
 }
 
@@ -2422,14 +2430,24 @@ void RDPDrChannelServer::SmartCardOperationsThread::run() {
 
 	quint32 ntStatus = STATUS_SUCCESS;
 	
-//	std::shared_ptr<smartcardIOControl_Call> call = std::make_shared<ScardAccessStartedEvent_Call>();
-	std::shared_ptr<smartcardIOControl_Call> call = std::make_shared<EstablishContext_Call>();
-
-	if ((ntStatus = createHandle(call))) {
-		CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", call->getIOctlString(false), ntStatus);
+	std::shared_ptr<smartcardIOControl_Call> accessStartedCall = std::make_shared<ScardAccessStartedEvent_Call>();
+	if ((ntStatus = createHandle(accessStartedCall))) {
+		CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", accessStartedCall->getIOctlString(false), ntStatus);
 	}
 
-	CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
+	// std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
+	// if ((ntStatus = createHandle(establishContextCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", establishContextCall->getIOctlString(false), ntStatus);
+	// }
+
+	// std::shared_ptr<smartcardIOControl_Call> listReadersCall = std::make_shared<ListReaders_Call>();
+	// if ((ntStatus = createHandle(listReadersCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", listReadersCall->getIOctlString(false), ntStatus);
+	// }
+	
+	// CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
+
+	thrift_start_process();
 
 	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() out !!!!!!");
 }
