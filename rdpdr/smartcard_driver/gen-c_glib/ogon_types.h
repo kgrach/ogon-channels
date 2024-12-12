@@ -11,12 +11,6 @@
 #include <glib-object.h>
 #include <thrift/c_glib/thrift_struct.h>
 #include <thrift/c_glib/protocol/thrift_protocol.h>
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* custom thrift includes */
 
 /* begin types */
@@ -32,6 +26,10 @@ typedef gint64 LPDWORD_RPC;
 typedef gchar * LPSTR_RPC;
 
 typedef gchar * LPCSTR_RPC;
+
+typedef gint64 SCARDHANDLE_RPC;
+
+typedef GByteArray * LPBYTE_RPC;
 
 /* struct return_ec */
 struct _return_ec
@@ -59,6 +57,31 @@ GType return_ec_get_type (void);
 #define IS_RETURN_EC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_RETURN_EC))
 #define IS_RETURN_EC_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_RETURN_EC))
 #define RETURN_EC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_RETURN_EC, return_ecClass))
+
+/* struct return_rc */
+struct _return_rc
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 retValue;
+  gboolean __isset_retValue;
+};
+typedef struct _return_rc return_rc;
+
+struct _return_rcClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _return_rcClass return_rcClass;
+
+GType return_rc_get_type (void);
+#define TYPE_RETURN_RC (return_rc_get_type())
+#define RETURN_RC(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_RETURN_RC, return_rc))
+#define RETURN_RC_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_RETURN_RC, return_rcClass))
+#define IS_RETURN_RC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_RETURN_RC))
+#define IS_RETURN_RC_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_RETURN_RC))
+#define RETURN_RC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_RETURN_RC, return_rcClass))
 
 /* struct return_lr */
 struct _return_lr
@@ -88,6 +111,72 @@ GType return_lr_get_type (void);
 #define IS_RETURN_LR(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_RETURN_LR))
 #define IS_RETURN_LR_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_RETURN_LR))
 #define RETURN_LR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_RETURN_LR, return_lrClass))
+
+/* struct return_c */
+struct _return_c
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 retValue;
+  gboolean __isset_retValue;
+  gint64 phCard;
+  gboolean __isset_phCard;
+  gint64 pdwActiveProtocol;
+  gboolean __isset_pdwActiveProtocol;
+};
+typedef struct _return_c return_c;
+
+struct _return_cClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _return_cClass return_cClass;
+
+GType return_c_get_type (void);
+#define TYPE_RETURN_C (return_c_get_type())
+#define RETURN_C(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_RETURN_C, return_c))
+#define RETURN_C_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_RETURN_C, return_cClass))
+#define IS_RETURN_C(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_RETURN_C))
+#define IS_RETURN_C_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_RETURN_C))
+#define RETURN_C_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_RETURN_C, return_cClass))
+
+/* struct return_s */
+struct _return_s
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 retValue;
+  gboolean __isset_retValue;
+  gchar * szReaderName;
+  gboolean __isset_szReaderName;
+  gint64 pcchReaderLen;
+  gboolean __isset_pcchReaderLen;
+  gint64 pdwState;
+  gboolean __isset_pdwState;
+  gint64 pdwProtocol;
+  gboolean __isset_pdwProtocol;
+  GByteArray * pbAtr;
+  gboolean __isset_pbAtr;
+  gint64 pcbAtrLen;
+  gboolean __isset_pcbAtrLen;
+};
+typedef struct _return_s return_s;
+
+struct _return_sClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _return_sClass return_sClass;
+
+GType return_s_get_type (void);
+#define TYPE_RETURN_S (return_s_get_type())
+#define RETURN_S(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_RETURN_S, return_s))
+#define RETURN_S_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_RETURN_S, return_sClass))
+#define IS_RETURN_S(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_RETURN_S))
+#define IS_RETURN_S_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_RETURN_S))
+#define RETURN_S_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_RETURN_S, return_sClass))
 
 /* constants */
 
@@ -191,9 +280,212 @@ GType ogon_list_readers_result_get_type (void);
 #define IS_OGON_LIST_READERS_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_LIST_READERS_RESULT))
 #define OGON_LIST_READERS_RESULT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_LIST_READERS_RESULT, ogonListReadersResultClass))
 
-#endif /* OGON_TYPES_H */
+/* struct ogonConnectArgs */
+struct _ogonConnectArgs
+{ 
+  ThriftStruct parent; 
 
-
-#ifdef __cplusplus
+  /* public */
+  gint64 hContext;
+  gboolean __isset_hContext;
+  gchar * szReader;
+  gboolean __isset_szReader;
+  gint64 dwShareMode;
+  gboolean __isset_dwShareMode;
+  gint64 dwPreferredProtocols;
+  gboolean __isset_dwPreferredProtocols;
 };
-#endif
+typedef struct _ogonConnectArgs ogonConnectArgs;
+
+struct _ogonConnectArgsClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonConnectArgsClass ogonConnectArgsClass;
+
+GType ogon_connect_args_get_type (void);
+#define TYPE_OGON_CONNECT_ARGS (ogon_connect_args_get_type())
+#define OGON_CONNECT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_CONNECT_ARGS, ogonConnectArgs))
+#define OGON_CONNECT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_CONNECT_ARGS, ogonConnectArgsClass))
+#define IS_OGON_CONNECT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_CONNECT_ARGS))
+#define IS_OGON_CONNECT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_CONNECT_ARGS))
+#define OGON_CONNECT_ARGS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_CONNECT_ARGS, ogonConnectArgsClass))
+
+/* struct ogonConnectResult */
+struct _ogonConnectResult
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  return_c * success;
+  gboolean __isset_success;
+};
+typedef struct _ogonConnectResult ogonConnectResult;
+
+struct _ogonConnectResultClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonConnectResultClass ogonConnectResultClass;
+
+GType ogon_connect_result_get_type (void);
+#define TYPE_OGON_CONNECT_RESULT (ogon_connect_result_get_type())
+#define OGON_CONNECT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_CONNECT_RESULT, ogonConnectResult))
+#define OGON_CONNECT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_CONNECT_RESULT, ogonConnectResultClass))
+#define IS_OGON_CONNECT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_CONNECT_RESULT))
+#define IS_OGON_CONNECT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_CONNECT_RESULT))
+#define OGON_CONNECT_RESULT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_CONNECT_RESULT, ogonConnectResultClass))
+
+/* struct ogonStatusArgs */
+struct _ogonStatusArgs
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 hCard;
+  gboolean __isset_hCard;
+};
+typedef struct _ogonStatusArgs ogonStatusArgs;
+
+struct _ogonStatusArgsClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonStatusArgsClass ogonStatusArgsClass;
+
+GType ogon_status_args_get_type (void);
+#define TYPE_OGON_STATUS_ARGS (ogon_status_args_get_type())
+#define OGON_STATUS_ARGS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_STATUS_ARGS, ogonStatusArgs))
+#define OGON_STATUS_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_STATUS_ARGS, ogonStatusArgsClass))
+#define IS_OGON_STATUS_ARGS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_STATUS_ARGS))
+#define IS_OGON_STATUS_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_STATUS_ARGS))
+#define OGON_STATUS_ARGS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_STATUS_ARGS, ogonStatusArgsClass))
+
+/* struct ogonStatusResult */
+struct _ogonStatusResult
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  return_s * success;
+  gboolean __isset_success;
+};
+typedef struct _ogonStatusResult ogonStatusResult;
+
+struct _ogonStatusResultClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonStatusResultClass ogonStatusResultClass;
+
+GType ogon_status_result_get_type (void);
+#define TYPE_OGON_STATUS_RESULT (ogon_status_result_get_type())
+#define OGON_STATUS_RESULT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_STATUS_RESULT, ogonStatusResult))
+#define OGON_STATUS_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_STATUS_RESULT, ogonStatusResultClass))
+#define IS_OGON_STATUS_RESULT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_STATUS_RESULT))
+#define IS_OGON_STATUS_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_STATUS_RESULT))
+#define OGON_STATUS_RESULT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_STATUS_RESULT, ogonStatusResultClass))
+
+/* struct ogonReleaseContextArgs */
+struct _ogonReleaseContextArgs
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 hContext;
+  gboolean __isset_hContext;
+};
+typedef struct _ogonReleaseContextArgs ogonReleaseContextArgs;
+
+struct _ogonReleaseContextArgsClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonReleaseContextArgsClass ogonReleaseContextArgsClass;
+
+GType ogon_release_context_args_get_type (void);
+#define TYPE_OGON_RELEASE_CONTEXT_ARGS (ogon_release_context_args_get_type())
+#define OGON_RELEASE_CONTEXT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_RELEASE_CONTEXT_ARGS, ogonReleaseContextArgs))
+#define OGON_RELEASE_CONTEXT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_RELEASE_CONTEXT_ARGS, ogonReleaseContextArgsClass))
+#define IS_OGON_RELEASE_CONTEXT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_RELEASE_CONTEXT_ARGS))
+#define IS_OGON_RELEASE_CONTEXT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_RELEASE_CONTEXT_ARGS))
+#define OGON_RELEASE_CONTEXT_ARGS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_RELEASE_CONTEXT_ARGS, ogonReleaseContextArgsClass))
+
+/* struct ogonReleaseContextResult */
+struct _ogonReleaseContextResult
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 success;
+  gboolean __isset_success;
+};
+typedef struct _ogonReleaseContextResult ogonReleaseContextResult;
+
+struct _ogonReleaseContextResultClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonReleaseContextResultClass ogonReleaseContextResultClass;
+
+GType ogon_release_context_result_get_type (void);
+#define TYPE_OGON_RELEASE_CONTEXT_RESULT (ogon_release_context_result_get_type())
+#define OGON_RELEASE_CONTEXT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_RELEASE_CONTEXT_RESULT, ogonReleaseContextResult))
+#define OGON_RELEASE_CONTEXT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_RELEASE_CONTEXT_RESULT, ogonReleaseContextResultClass))
+#define IS_OGON_RELEASE_CONTEXT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_RELEASE_CONTEXT_RESULT))
+#define IS_OGON_RELEASE_CONTEXT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_RELEASE_CONTEXT_RESULT))
+#define OGON_RELEASE_CONTEXT_RESULT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_RELEASE_CONTEXT_RESULT, ogonReleaseContextResultClass))
+
+/* struct ogonDisconnectArgs */
+struct _ogonDisconnectArgs
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 hCard;
+  gboolean __isset_hCard;
+  gint64 dwDisposition;
+  gboolean __isset_dwDisposition;
+};
+typedef struct _ogonDisconnectArgs ogonDisconnectArgs;
+
+struct _ogonDisconnectArgsClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonDisconnectArgsClass ogonDisconnectArgsClass;
+
+GType ogon_disconnect_args_get_type (void);
+#define TYPE_OGON_DISCONNECT_ARGS (ogon_disconnect_args_get_type())
+#define OGON_DISCONNECT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_DISCONNECT_ARGS, ogonDisconnectArgs))
+#define OGON_DISCONNECT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_DISCONNECT_ARGS, ogonDisconnectArgsClass))
+#define IS_OGON_DISCONNECT_ARGS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_DISCONNECT_ARGS))
+#define IS_OGON_DISCONNECT_ARGS_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_DISCONNECT_ARGS))
+#define OGON_DISCONNECT_ARGS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_DISCONNECT_ARGS, ogonDisconnectArgsClass))
+
+/* struct ogonDisconnectResult */
+struct _ogonDisconnectResult
+{ 
+  ThriftStruct parent; 
+
+  /* public */
+  gint64 success;
+  gboolean __isset_success;
+};
+typedef struct _ogonDisconnectResult ogonDisconnectResult;
+
+struct _ogonDisconnectResultClass
+{
+  ThriftStructClass parent;
+};
+typedef struct _ogonDisconnectResultClass ogonDisconnectResultClass;
+
+GType ogon_disconnect_result_get_type (void);
+#define TYPE_OGON_DISCONNECT_RESULT (ogon_disconnect_result_get_type())
+#define OGON_DISCONNECT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_OGON_DISCONNECT_RESULT, ogonDisconnectResult))
+#define OGON_DISCONNECT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_CAST ((c), _TYPE_OGON_DISCONNECT_RESULT, ogonDisconnectResultClass))
+#define IS_OGON_DISCONNECT_RESULT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_OGON_DISCONNECT_RESULT))
+#define IS_OGON_DISCONNECT_RESULT_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE ((c), TYPE_OGON_DISCONNECT_RESULT))
+#define OGON_DISCONNECT_RESULT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_DISCONNECT_RESULT, ogonDisconnectResultClass))
+
+#endif /* OGON_TYPES_H */

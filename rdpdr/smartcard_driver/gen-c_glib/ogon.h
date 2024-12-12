@@ -16,7 +16,6 @@
 extern "C" {
 #endif
 
-
 /* ogon service interface */
 typedef struct _ogonIf ogonIf;  /* dummy object */
 
@@ -26,6 +25,10 @@ struct _ogonIfInterface
 
   gboolean (*establish_context) (ogonIf *iface, return_ec ** _return, const DWORD_RPC dwScope, GError **error);
   gboolean (*list_readers) (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError **error);
+  gboolean (*connect) (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error);
+  gboolean (*status) (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error);
+  gboolean (*release_context) (ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error);
+  gboolean (*disconnect) (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error);
 };
 typedef struct _ogonIfInterface ogonIfInterface;
 
@@ -37,6 +40,10 @@ GType ogon_if_get_type (void);
 
 gboolean ogon_if_establish_context (ogonIf *iface, return_ec ** _return, const DWORD_RPC dwScope, GError **error);
 gboolean ogon_if_list_readers (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError **error);
+gboolean ogon_if_connect (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error);
+gboolean ogon_if_status (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error);
+gboolean ogon_if_release_context (ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error);
+gboolean ogon_if_disconnect (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error);
 
 /* ogon service client */
 struct _ogonClient
@@ -68,6 +75,18 @@ gboolean ogon_client_recv_establish_context (ogonIf * iface, return_ec ** _retur
 gboolean ogon_client_list_readers (ogonIf * iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError ** error);
 gboolean ogon_client_send_list_readers (ogonIf * iface, const SCARDCONTEXT_RPC hContext, GError ** error);
 gboolean ogon_client_recv_list_readers (ogonIf * iface, return_lr ** _return, GError ** error);
+gboolean ogon_client_connect (ogonIf * iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError ** error);
+gboolean ogon_client_send_connect (ogonIf * iface, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError ** error);
+gboolean ogon_client_recv_connect (ogonIf * iface, return_c ** _return, GError ** error);
+gboolean ogon_client_status (ogonIf * iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError ** error);
+gboolean ogon_client_send_status (ogonIf * iface, const SCARDHANDLE_RPC hCard, GError ** error);
+gboolean ogon_client_recv_status (ogonIf * iface, return_s ** _return, GError ** error);
+gboolean ogon_client_release_context (ogonIf * iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError ** error);
+gboolean ogon_client_send_release_context (ogonIf * iface, const SCARDCONTEXT_RPC hContext, GError ** error);
+gboolean ogon_client_recv_release_context (ogonIf * iface, LONG_RPC* _return, GError ** error);
+gboolean ogon_client_disconnect (ogonIf * iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError ** error);
+gboolean ogon_client_send_disconnect (ogonIf * iface, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError ** error);
+gboolean ogon_client_recv_disconnect (ogonIf * iface, LONG_RPC* _return, GError ** error);
 void ogon_client_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec);
 void ogon_client_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec);
 
@@ -84,6 +103,10 @@ struct _ogonHandlerClass
 
   gboolean (*establish_context) (ogonIf *iface, return_ec ** _return, const DWORD_RPC dwScope, GError **error);
   gboolean (*list_readers) (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError **error);
+  gboolean (*connect) (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error);
+  gboolean (*status) (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error);
+  gboolean (*release_context) (ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error);
+  gboolean (*disconnect) (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error);
 };
 typedef struct _ogonHandlerClass ogonHandlerClass;
 
@@ -97,6 +120,10 @@ GType ogon_handler_get_type (void);
 
 gboolean ogon_handler_establish_context (ogonIf *iface, return_ec ** _return, const DWORD_RPC dwScope, GError **error);
 gboolean ogon_handler_list_readers (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError **error);
+gboolean ogon_handler_connect (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error);
+gboolean ogon_handler_status (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error);
+gboolean ogon_handler_release_context (ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error);
+gboolean ogon_handler_disconnect (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error);
 
 /* ogon processor */
 struct _ogonProcessor
@@ -132,6 +159,7 @@ GType ogon_processor_get_type (void);
 #define OGON_PROCESSOR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), TYPE_OGON_PROCESSOR, ogonProcessorClass))
 
 #endif /* OGON_H */
+
 
 #ifdef __cplusplus
 };

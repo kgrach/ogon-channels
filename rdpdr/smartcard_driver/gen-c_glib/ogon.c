@@ -21,6 +21,30 @@ ogon_if_list_readers (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RP
   return OGON_IF_GET_INTERFACE (iface)->list_readers (iface, _return, hContext, error);
 }
 
+gboolean
+ogon_if_connect (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error)
+{
+  return OGON_IF_GET_INTERFACE (iface)->connect (iface, _return, hContext, szReader, dwShareMode, dwPreferredProtocols, error);
+}
+
+gboolean
+ogon_if_status (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error)
+{
+  return OGON_IF_GET_INTERFACE (iface)->status (iface, _return, hCard, error);
+}
+
+gboolean
+ogon_if_release_context (ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error)
+{
+  return OGON_IF_GET_INTERFACE (iface)->release_context (iface, _return, hContext, error);
+}
+
+gboolean
+ogon_if_disconnect (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error)
+{
+  return OGON_IF_GET_INTERFACE (iface)->disconnect (iface, _return, hCard, dwDisposition, error);
+}
+
 GType
 ogon_if_get_type (void)
 {
@@ -454,11 +478,763 @@ gboolean ogon_client_list_readers (ogonIf * iface, return_lr ** _return, const S
   return TRUE;
 }
 
+gboolean ogon_client_send_connect (ogonIf * iface, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError ** error)
+{
+  gint32 cseqid = 0;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->output_protocol;
+
+  if (thrift_protocol_write_message_begin (protocol, "Connect", T_CALL, cseqid, error) < 0)
+    return FALSE;
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+
+    
+    if ((ret = thrift_protocol_write_struct_begin (protocol, "Connect_args", error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "hContext", T_I64, 1, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, hContext, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "szReader", T_STRING, 2, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_string (protocol, szReader, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "dwShareMode", T_I64, 3, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, dwShareMode, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "dwPreferredProtocols", T_I64, 4, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, dwPreferredProtocols, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_write_message_end (protocol, error) < 0)
+    return FALSE;
+  if (!thrift_transport_flush (protocol->transport, error))
+    return FALSE;
+  if (!thrift_transport_write_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_recv_connect (ogonIf * iface, return_c ** _return, GError ** error)
+{
+  gint32 rseqid;
+  gchar * fname = NULL;
+  ThriftMessageType mtype;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->input_protocol;
+  ThriftApplicationException *xception;
+
+  if (thrift_protocol_read_message_begin (protocol, &fname, &mtype, &rseqid, error) < 0) {
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+
+  if (mtype == T_EXCEPTION) {
+    if (fname) g_free (fname);
+    xception = g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION, NULL);
+    thrift_struct_read (THRIFT_STRUCT (xception), protocol, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR,xception->type, "application error: %s", xception->message);
+    g_object_unref (xception);
+    return FALSE;
+  } else if (mtype != T_REPLY) {
+    if (fname) g_free (fname);
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_INVALID_MESSAGE_TYPE, "invalid message type %d, expected T_REPLY", mtype);
+    return FALSE;
+  } else if (strncmp (fname, "Connect", 7) != 0) {
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol,error);
+    thrift_transport_read_end (protocol->transport, error);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_WRONG_METHOD_NAME, "wrong method name %s, expected Connect", fname);
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+  if (fname) g_free (fname);
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+    gchar *name = NULL;
+    ThriftType ftype;
+    gint16 fid;
+    guint32 len = 0;
+    gpointer data = NULL;
+    
+
+    /* satisfy -Wall in case these aren't used */
+    THRIFT_UNUSED_VAR (len);
+    THRIFT_UNUSED_VAR (data);
+
+    /* read the struct begin marker */
+    if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+    {
+      if (name) g_free (name);
+      return 0;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* read the struct fields */
+    while (1)
+    {
+      /* read the beginning of a field */
+      if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+      {
+        if (name) g_free (name);
+        return 0;
+      }
+      xfer += ret;
+      if (name) g_free (name);
+      name = NULL;
+
+      /* break if we get a STOP field */
+      if (ftype == T_STOP)
+      {
+        break;
+      }
+
+      switch (fid)
+      {
+        case 0:
+          if (ftype == T_STRUCT)
+          {
+            if ((ret = thrift_struct_read (THRIFT_STRUCT (*_return), protocol, error)) < 0)
+            {
+              return 0;
+            }
+            xfer += ret;
+          } else {
+            if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+              return 0;
+            xfer += ret;
+          }
+          break;
+        default:
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return 0;
+          xfer += ret;
+          break;
+      }
+      if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+        return 0;
+      xfer += ret;
+    }
+
+    if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_read_message_end (protocol, error) < 0)
+    return FALSE;
+
+  if (!thrift_transport_read_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_connect (ogonIf * iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError ** error)
+{
+  if (!ogon_client_send_connect (iface, hContext, szReader, dwShareMode, dwPreferredProtocols, error))
+    return FALSE;
+  if (!ogon_client_recv_connect (iface, _return, error))
+    return FALSE;
+  return TRUE;
+}
+
+gboolean ogon_client_send_status (ogonIf * iface, const SCARDHANDLE_RPC hCard, GError ** error)
+{
+  gint32 cseqid = 0;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->output_protocol;
+
+  if (thrift_protocol_write_message_begin (protocol, "Status", T_CALL, cseqid, error) < 0)
+    return FALSE;
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+
+    
+    if ((ret = thrift_protocol_write_struct_begin (protocol, "Status_args", error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "hCard", T_I64, 1, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, hCard, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_write_message_end (protocol, error) < 0)
+    return FALSE;
+  if (!thrift_transport_flush (protocol->transport, error))
+    return FALSE;
+  if (!thrift_transport_write_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_recv_status (ogonIf * iface, return_s ** _return, GError ** error)
+{
+  gint32 rseqid;
+  gchar * fname = NULL;
+  ThriftMessageType mtype;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->input_protocol;
+  ThriftApplicationException *xception;
+
+  if (thrift_protocol_read_message_begin (protocol, &fname, &mtype, &rseqid, error) < 0) {
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+
+  if (mtype == T_EXCEPTION) {
+    if (fname) g_free (fname);
+    xception = g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION, NULL);
+    thrift_struct_read (THRIFT_STRUCT (xception), protocol, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR,xception->type, "application error: %s", xception->message);
+    g_object_unref (xception);
+    return FALSE;
+  } else if (mtype != T_REPLY) {
+    if (fname) g_free (fname);
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_INVALID_MESSAGE_TYPE, "invalid message type %d, expected T_REPLY", mtype);
+    return FALSE;
+  } else if (strncmp (fname, "Status", 6) != 0) {
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol,error);
+    thrift_transport_read_end (protocol->transport, error);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_WRONG_METHOD_NAME, "wrong method name %s, expected Status", fname);
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+  if (fname) g_free (fname);
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+    gchar *name = NULL;
+    ThriftType ftype;
+    gint16 fid;
+    guint32 len = 0;
+    gpointer data = NULL;
+    
+
+    /* satisfy -Wall in case these aren't used */
+    THRIFT_UNUSED_VAR (len);
+    THRIFT_UNUSED_VAR (data);
+
+    /* read the struct begin marker */
+    if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+    {
+      if (name) g_free (name);
+      return 0;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* read the struct fields */
+    while (1)
+    {
+      /* read the beginning of a field */
+      if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+      {
+        if (name) g_free (name);
+        return 0;
+      }
+      xfer += ret;
+      if (name) g_free (name);
+      name = NULL;
+
+      /* break if we get a STOP field */
+      if (ftype == T_STOP)
+      {
+        break;
+      }
+
+      switch (fid)
+      {
+        case 0:
+          if (ftype == T_STRUCT)
+          {
+            if ((ret = thrift_struct_read (THRIFT_STRUCT (*_return), protocol, error)) < 0)
+            {
+              return 0;
+            }
+            xfer += ret;
+          } else {
+            if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+              return 0;
+            xfer += ret;
+          }
+          break;
+        default:
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return 0;
+          xfer += ret;
+          break;
+      }
+      if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+        return 0;
+      xfer += ret;
+    }
+
+    if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_read_message_end (protocol, error) < 0)
+    return FALSE;
+
+  if (!thrift_transport_read_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_status (ogonIf * iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError ** error)
+{
+  if (!ogon_client_send_status (iface, hCard, error))
+    return FALSE;
+  if (!ogon_client_recv_status (iface, _return, error))
+    return FALSE;
+  return TRUE;
+}
+
+gboolean ogon_client_send_release_context (ogonIf * iface, const SCARDCONTEXT_RPC hContext, GError ** error)
+{
+  gint32 cseqid = 0;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->output_protocol;
+
+  if (thrift_protocol_write_message_begin (protocol, "ReleaseContext", T_CALL, cseqid, error) < 0)
+    return FALSE;
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+
+    
+    if ((ret = thrift_protocol_write_struct_begin (protocol, "ReleaseContext_args", error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "hContext", T_I64, 1, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, hContext, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_write_message_end (protocol, error) < 0)
+    return FALSE;
+  if (!thrift_transport_flush (protocol->transport, error))
+    return FALSE;
+  if (!thrift_transport_write_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_recv_release_context (ogonIf * iface, LONG_RPC* _return, GError ** error)
+{
+  gint32 rseqid;
+  gchar * fname = NULL;
+  ThriftMessageType mtype;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->input_protocol;
+  ThriftApplicationException *xception;
+
+  if (thrift_protocol_read_message_begin (protocol, &fname, &mtype, &rseqid, error) < 0) {
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+
+  if (mtype == T_EXCEPTION) {
+    if (fname) g_free (fname);
+    xception = g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION, NULL);
+    thrift_struct_read (THRIFT_STRUCT (xception), protocol, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR,xception->type, "application error: %s", xception->message);
+    g_object_unref (xception);
+    return FALSE;
+  } else if (mtype != T_REPLY) {
+    if (fname) g_free (fname);
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_INVALID_MESSAGE_TYPE, "invalid message type %d, expected T_REPLY", mtype);
+    return FALSE;
+  } else if (strncmp (fname, "ReleaseContext", 14) != 0) {
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol,error);
+    thrift_transport_read_end (protocol->transport, error);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_WRONG_METHOD_NAME, "wrong method name %s, expected ReleaseContext", fname);
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+  if (fname) g_free (fname);
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+    gchar *name = NULL;
+    ThriftType ftype;
+    gint16 fid;
+    guint32 len = 0;
+    gpointer data = NULL;
+    
+
+    /* satisfy -Wall in case these aren't used */
+    THRIFT_UNUSED_VAR (len);
+    THRIFT_UNUSED_VAR (data);
+
+    /* read the struct begin marker */
+    if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+    {
+      if (name) g_free (name);
+      return 0;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* read the struct fields */
+    while (1)
+    {
+      /* read the beginning of a field */
+      if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+      {
+        if (name) g_free (name);
+        return 0;
+      }
+      xfer += ret;
+      if (name) g_free (name);
+      name = NULL;
+
+      /* break if we get a STOP field */
+      if (ftype == T_STOP)
+      {
+        break;
+      }
+
+      switch (fid)
+      {
+        case 0:
+          if (ftype == T_I64)
+          {
+            if ((ret = thrift_protocol_read_i64 (protocol, &*_return, error)) < 0)
+              return 0;
+            xfer += ret;
+          } else {
+            if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+              return 0;
+            xfer += ret;
+          }
+          break;
+        default:
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return 0;
+          xfer += ret;
+          break;
+      }
+      if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+        return 0;
+      xfer += ret;
+    }
+
+    if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_read_message_end (protocol, error) < 0)
+    return FALSE;
+
+  if (!thrift_transport_read_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_release_context (ogonIf * iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError ** error)
+{
+  if (!ogon_client_send_release_context (iface, hContext, error))
+    return FALSE;
+  if (!ogon_client_recv_release_context (iface, _return, error))
+    return FALSE;
+  return TRUE;
+}
+
+gboolean ogon_client_send_disconnect (ogonIf * iface, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError ** error)
+{
+  gint32 cseqid = 0;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->output_protocol;
+
+  if (thrift_protocol_write_message_begin (protocol, "Disconnect", T_CALL, cseqid, error) < 0)
+    return FALSE;
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+
+    
+    if ((ret = thrift_protocol_write_struct_begin (protocol, "Disconnect_args", error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "hCard", T_I64, 1, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, hCard, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_begin (protocol, "dwDisposition", T_I64, 2, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, dwDisposition, error)) < 0)
+      return 0;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_write_message_end (protocol, error) < 0)
+    return FALSE;
+  if (!thrift_transport_flush (protocol->transport, error))
+    return FALSE;
+  if (!thrift_transport_write_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_recv_disconnect (ogonIf * iface, LONG_RPC* _return, GError ** error)
+{
+  gint32 rseqid;
+  gchar * fname = NULL;
+  ThriftMessageType mtype;
+  ThriftProtocol * protocol = OGON_CLIENT (iface)->input_protocol;
+  ThriftApplicationException *xception;
+
+  if (thrift_protocol_read_message_begin (protocol, &fname, &mtype, &rseqid, error) < 0) {
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+
+  if (mtype == T_EXCEPTION) {
+    if (fname) g_free (fname);
+    xception = g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION, NULL);
+    thrift_struct_read (THRIFT_STRUCT (xception), protocol, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR,xception->type, "application error: %s", xception->message);
+    g_object_unref (xception);
+    return FALSE;
+  } else if (mtype != T_REPLY) {
+    if (fname) g_free (fname);
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol, NULL);
+    thrift_transport_read_end (protocol->transport, NULL);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_INVALID_MESSAGE_TYPE, "invalid message type %d, expected T_REPLY", mtype);
+    return FALSE;
+  } else if (strncmp (fname, "Disconnect", 10) != 0) {
+    thrift_protocol_skip (protocol, T_STRUCT, NULL);
+    thrift_protocol_read_message_end (protocol,error);
+    thrift_transport_read_end (protocol->transport, error);
+    g_set_error (error, THRIFT_APPLICATION_EXCEPTION_ERROR, THRIFT_APPLICATION_EXCEPTION_ERROR_WRONG_METHOD_NAME, "wrong method name %s, expected Disconnect", fname);
+    if (fname) g_free (fname);
+    return FALSE;
+  }
+  if (fname) g_free (fname);
+
+  {
+    gint32 ret;
+    gint32 xfer = 0;
+    gchar *name = NULL;
+    ThriftType ftype;
+    gint16 fid;
+    guint32 len = 0;
+    gpointer data = NULL;
+    
+
+    /* satisfy -Wall in case these aren't used */
+    THRIFT_UNUSED_VAR (len);
+    THRIFT_UNUSED_VAR (data);
+
+    /* read the struct begin marker */
+    if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+    {
+      if (name) g_free (name);
+      return 0;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* read the struct fields */
+    while (1)
+    {
+      /* read the beginning of a field */
+      if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+      {
+        if (name) g_free (name);
+        return 0;
+      }
+      xfer += ret;
+      if (name) g_free (name);
+      name = NULL;
+
+      /* break if we get a STOP field */
+      if (ftype == T_STOP)
+      {
+        break;
+      }
+
+      switch (fid)
+      {
+        case 0:
+          if (ftype == T_I64)
+          {
+            if ((ret = thrift_protocol_read_i64 (protocol, &*_return, error)) < 0)
+              return 0;
+            xfer += ret;
+          } else {
+            if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+              return 0;
+            xfer += ret;
+          }
+          break;
+        default:
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return 0;
+          xfer += ret;
+          break;
+      }
+      if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+        return 0;
+      xfer += ret;
+    }
+
+    if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+      return 0;
+    xfer += ret;
+
+  }
+
+  if (thrift_protocol_read_message_end (protocol, error) < 0)
+    return FALSE;
+
+  if (!thrift_transport_read_end (protocol->transport, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+gboolean ogon_client_disconnect (ogonIf * iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError ** error)
+{
+  if (!ogon_client_send_disconnect (iface, hCard, dwDisposition, error))
+    return FALSE;
+  if (!ogon_client_recv_disconnect (iface, _return, error))
+    return FALSE;
+  return TRUE;
+}
+
 static void
 ogon_if_interface_init (ogonIfInterface *iface)
 {
   iface->establish_context = ogon_client_establish_context;
   iface->list_readers = ogon_client_list_readers;
+  iface->connect = ogon_client_connect;
+  iface->status = ogon_client_status;
+  iface->release_context = ogon_client_release_context;
+  iface->disconnect = ogon_client_disconnect;
 }
 
 static void
@@ -517,11 +1293,43 @@ gboolean ogon_handler_list_readers (ogonIf * iface, return_lr ** _return, const 
   return OGON_HANDLER_GET_CLASS (iface)->list_readers (iface, _return, hContext, error);
 }
 
+gboolean ogon_handler_connect (ogonIf * iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError ** error)
+{
+  g_return_val_if_fail (IS_OGON_HANDLER (iface), FALSE);
+
+  return OGON_HANDLER_GET_CLASS (iface)->connect (iface, _return, hContext, szReader, dwShareMode, dwPreferredProtocols, error);
+}
+
+gboolean ogon_handler_status (ogonIf * iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError ** error)
+{
+  g_return_val_if_fail (IS_OGON_HANDLER (iface), FALSE);
+
+  return OGON_HANDLER_GET_CLASS (iface)->status (iface, _return, hCard, error);
+}
+
+gboolean ogon_handler_release_context (ogonIf * iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError ** error)
+{
+  g_return_val_if_fail (IS_OGON_HANDLER (iface), FALSE);
+
+  return OGON_HANDLER_GET_CLASS (iface)->release_context (iface, _return, hContext, error);
+}
+
+gboolean ogon_handler_disconnect (ogonIf * iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError ** error)
+{
+  g_return_val_if_fail (IS_OGON_HANDLER (iface), FALSE);
+
+  return OGON_HANDLER_GET_CLASS (iface)->disconnect (iface, _return, hCard, dwDisposition, error);
+}
+
 static void
 ogon_handler_ogon_if_interface_init (ogonIfInterface *iface)
 {
   iface->establish_context = ogon_handler_establish_context;
   iface->list_readers = ogon_handler_list_readers;
+  iface->connect = ogon_handler_connect;
+  iface->status = ogon_handler_status;
+  iface->release_context = ogon_handler_release_context;
+  iface->disconnect = ogon_handler_disconnect;
 }
 
 static void
@@ -535,6 +1343,10 @@ ogon_handler_class_init (ogonHandlerClass *cls)
 {
   cls->establish_context = NULL;
   cls->list_readers = NULL;
+  cls->connect = NULL;
+  cls->status = NULL;
+  cls->release_context = NULL;
+  cls->disconnect = NULL;
 }
 
 enum _ogonProcessorProperties
@@ -571,9 +1383,33 @@ ogon_processor_process_list_readers (ogonProcessor *,
                                      ThriftProtocol *,
                                      ThriftProtocol *,
                                      GError **);
+static gboolean
+ogon_processor_process_connect (ogonProcessor *,
+                                gint32,
+                                ThriftProtocol *,
+                                ThriftProtocol *,
+                                GError **);
+static gboolean
+ogon_processor_process_status (ogonProcessor *,
+                               gint32,
+                               ThriftProtocol *,
+                               ThriftProtocol *,
+                               GError **);
+static gboolean
+ogon_processor_process_release_context (ogonProcessor *,
+                                        gint32,
+                                        ThriftProtocol *,
+                                        ThriftProtocol *,
+                                        GError **);
+static gboolean
+ogon_processor_process_disconnect (ogonProcessor *,
+                                   gint32,
+                                   ThriftProtocol *,
+                                   ThriftProtocol *,
+                                   GError **);
 
 static ogon_processor_process_function_def
-ogon_processor_process_function_defs[2] = {
+ogon_processor_process_function_defs[6] = {
   {
     "EstablishContext",
     ogon_processor_process_establish_context
@@ -581,6 +1417,22 @@ ogon_processor_process_function_defs[2] = {
   {
     "ListReaders",
     ogon_processor_process_list_readers
+  },
+  {
+    "Connect",
+    ogon_processor_process_connect
+  },
+  {
+    "Status",
+    ogon_processor_process_status
+  },
+  {
+    "ReleaseContext",
+    ogon_processor_process_release_context
+  },
+  {
+    "Disconnect",
+    ogon_processor_process_disconnect
   }
 };
 
@@ -777,6 +1629,400 @@ ogon_processor_process_list_readers (ogonProcessor *self,
 }
 
 static gboolean
+ogon_processor_process_connect (ogonProcessor *self,
+                                gint32 sequence_id,
+                                ThriftProtocol *input_protocol,
+                                ThriftProtocol *output_protocol,
+                                GError **error)
+{
+  gboolean result = TRUE;
+  ThriftTransport * transport;
+  ThriftApplicationException *xception;
+  ogonConnectArgs * args =
+    g_object_new (TYPE_OGON_CONNECT_ARGS, NULL);
+
+  g_object_get (input_protocol, "transport", &transport, NULL);
+
+  if ((thrift_struct_read (THRIFT_STRUCT (args), input_protocol, error) != -1) &&
+      (thrift_protocol_read_message_end (input_protocol, error) != -1) &&
+      (thrift_transport_read_end (transport, error) != FALSE))
+  {
+    SCARDCONTEXT_RPC hContext;
+    LPCSTR_RPC szReader;
+    DWORD_RPC dwShareMode;
+    DWORD_RPC dwPreferredProtocols;
+    return_c * return_value;
+    ogonConnectResult * result_struct;
+
+    g_object_get (args,
+                  "hContext", &hContext,
+                  "szReader", &szReader,
+                  "dwShareMode", &dwShareMode,
+                  "dwPreferredProtocols", &dwPreferredProtocols,
+                  NULL);
+
+    g_object_unref (transport);
+    g_object_get (output_protocol, "transport", &transport, NULL);
+
+    result_struct = g_object_new (TYPE_OGON_CONNECT_RESULT, NULL);
+    g_object_get (result_struct, "success", &return_value, NULL);
+
+    if (ogon_handler_connect (OGON_IF (self->handler),
+                              &return_value,
+                              hContext,
+                              szReader,
+                              dwShareMode,
+                              dwPreferredProtocols,
+                              error) == TRUE)
+    {
+      g_object_set (result_struct, "success", return_value, NULL);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Connect",
+                                               T_REPLY,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (result_struct),
+                               output_protocol,
+                               error) != -1));
+    }
+    else
+    {
+      if (*error == NULL)
+        g_warning ("ogon.Connect implementation returned FALSE "
+                   "but did not set an error");
+
+      xception =
+        g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION,
+                      "type",    *error != NULL ? (*error)->code :
+                                 THRIFT_APPLICATION_EXCEPTION_ERROR_UNKNOWN,
+                      "message", *error != NULL ? (*error)->message : NULL,
+                      NULL);
+      g_clear_error (error);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Connect",
+                                               T_EXCEPTION,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (xception),
+                               output_protocol,
+                               error) != -1));
+
+      g_object_unref (xception);
+    }
+
+    if (szReader != NULL)
+      g_free (szReader);
+    if (return_value != NULL)
+      g_object_unref (return_value);
+    g_object_unref (result_struct);
+
+    if (result == TRUE)
+      result =
+        ((thrift_protocol_write_message_end (output_protocol, error) != -1) &&
+         (thrift_transport_write_end (transport, error) != FALSE) &&
+         (thrift_transport_flush (transport, error) != FALSE));
+  }
+  else
+    result = FALSE;
+
+  g_object_unref (transport);
+  g_object_unref (args);
+
+  return result;
+}
+
+static gboolean
+ogon_processor_process_status (ogonProcessor *self,
+                               gint32 sequence_id,
+                               ThriftProtocol *input_protocol,
+                               ThriftProtocol *output_protocol,
+                               GError **error)
+{
+  gboolean result = TRUE;
+  ThriftTransport * transport;
+  ThriftApplicationException *xception;
+  ogonStatusArgs * args =
+    g_object_new (TYPE_OGON_STATUS_ARGS, NULL);
+
+  g_object_get (input_protocol, "transport", &transport, NULL);
+
+  if ((thrift_struct_read (THRIFT_STRUCT (args), input_protocol, error) != -1) &&
+      (thrift_protocol_read_message_end (input_protocol, error) != -1) &&
+      (thrift_transport_read_end (transport, error) != FALSE))
+  {
+    SCARDHANDLE_RPC hCard;
+    return_s * return_value;
+    ogonStatusResult * result_struct;
+
+    g_object_get (args,
+                  "hCard", &hCard,
+                  NULL);
+
+    g_object_unref (transport);
+    g_object_get (output_protocol, "transport", &transport, NULL);
+
+    result_struct = g_object_new (TYPE_OGON_STATUS_RESULT, NULL);
+    g_object_get (result_struct, "success", &return_value, NULL);
+
+    if (ogon_handler_status (OGON_IF (self->handler),
+                             &return_value,
+                             hCard,
+                             error) == TRUE)
+    {
+      g_object_set (result_struct, "success", return_value, NULL);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Status",
+                                               T_REPLY,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (result_struct),
+                               output_protocol,
+                               error) != -1));
+    }
+    else
+    {
+      if (*error == NULL)
+        g_warning ("ogon.Status implementation returned FALSE "
+                   "but did not set an error");
+
+      xception =
+        g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION,
+                      "type",    *error != NULL ? (*error)->code :
+                                 THRIFT_APPLICATION_EXCEPTION_ERROR_UNKNOWN,
+                      "message", *error != NULL ? (*error)->message : NULL,
+                      NULL);
+      g_clear_error (error);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Status",
+                                               T_EXCEPTION,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (xception),
+                               output_protocol,
+                               error) != -1));
+
+      g_object_unref (xception);
+    }
+
+    if (return_value != NULL)
+      g_object_unref (return_value);
+    g_object_unref (result_struct);
+
+    if (result == TRUE)
+      result =
+        ((thrift_protocol_write_message_end (output_protocol, error) != -1) &&
+         (thrift_transport_write_end (transport, error) != FALSE) &&
+         (thrift_transport_flush (transport, error) != FALSE));
+  }
+  else
+    result = FALSE;
+
+  g_object_unref (transport);
+  g_object_unref (args);
+
+  return result;
+}
+
+static gboolean
+ogon_processor_process_release_context (ogonProcessor *self,
+                                        gint32 sequence_id,
+                                        ThriftProtocol *input_protocol,
+                                        ThriftProtocol *output_protocol,
+                                        GError **error)
+{
+  gboolean result = TRUE;
+  ThriftTransport * transport;
+  ThriftApplicationException *xception;
+  ogonReleaseContextArgs * args =
+    g_object_new (TYPE_OGON_RELEASE_CONTEXT_ARGS, NULL);
+
+  g_object_get (input_protocol, "transport", &transport, NULL);
+
+  if ((thrift_struct_read (THRIFT_STRUCT (args), input_protocol, error) != -1) &&
+      (thrift_protocol_read_message_end (input_protocol, error) != -1) &&
+      (thrift_transport_read_end (transport, error) != FALSE))
+  {
+    SCARDCONTEXT_RPC hContext;
+    LONG_RPC return_value;
+    ogonReleaseContextResult * result_struct;
+
+    g_object_get (args,
+                  "hContext", &hContext,
+                  NULL);
+
+    g_object_unref (transport);
+    g_object_get (output_protocol, "transport", &transport, NULL);
+
+    result_struct = g_object_new (TYPE_OGON_RELEASE_CONTEXT_RESULT, NULL);
+    g_object_get (result_struct, "success", &return_value, NULL);
+
+    if (ogon_handler_release_context (OGON_IF (self->handler),
+                                      &return_value,
+                                      hContext,
+                                      error) == TRUE)
+    {
+      g_object_set (result_struct, "success", return_value, NULL);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "ReleaseContext",
+                                               T_REPLY,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (result_struct),
+                               output_protocol,
+                               error) != -1));
+    }
+    else
+    {
+      if (*error == NULL)
+        g_warning ("ogon.ReleaseContext implementation returned FALSE "
+                   "but did not set an error");
+
+      xception =
+        g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION,
+                      "type",    *error != NULL ? (*error)->code :
+                                 THRIFT_APPLICATION_EXCEPTION_ERROR_UNKNOWN,
+                      "message", *error != NULL ? (*error)->message : NULL,
+                      NULL);
+      g_clear_error (error);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "ReleaseContext",
+                                               T_EXCEPTION,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (xception),
+                               output_protocol,
+                               error) != -1));
+
+      g_object_unref (xception);
+    }
+
+    g_object_unref (result_struct);
+
+    if (result == TRUE)
+      result =
+        ((thrift_protocol_write_message_end (output_protocol, error) != -1) &&
+         (thrift_transport_write_end (transport, error) != FALSE) &&
+         (thrift_transport_flush (transport, error) != FALSE));
+  }
+  else
+    result = FALSE;
+
+  g_object_unref (transport);
+  g_object_unref (args);
+
+  return result;
+}
+
+static gboolean
+ogon_processor_process_disconnect (ogonProcessor *self,
+                                   gint32 sequence_id,
+                                   ThriftProtocol *input_protocol,
+                                   ThriftProtocol *output_protocol,
+                                   GError **error)
+{
+  gboolean result = TRUE;
+  ThriftTransport * transport;
+  ThriftApplicationException *xception;
+  ogonDisconnectArgs * args =
+    g_object_new (TYPE_OGON_DISCONNECT_ARGS, NULL);
+
+  g_object_get (input_protocol, "transport", &transport, NULL);
+
+  if ((thrift_struct_read (THRIFT_STRUCT (args), input_protocol, error) != -1) &&
+      (thrift_protocol_read_message_end (input_protocol, error) != -1) &&
+      (thrift_transport_read_end (transport, error) != FALSE))
+  {
+    SCARDHANDLE_RPC hCard;
+    DWORD_RPC dwDisposition;
+    LONG_RPC return_value;
+    ogonDisconnectResult * result_struct;
+
+    g_object_get (args,
+                  "hCard", &hCard,
+                  "dwDisposition", &dwDisposition,
+                  NULL);
+
+    g_object_unref (transport);
+    g_object_get (output_protocol, "transport", &transport, NULL);
+
+    result_struct = g_object_new (TYPE_OGON_DISCONNECT_RESULT, NULL);
+    g_object_get (result_struct, "success", &return_value, NULL);
+
+    if (ogon_handler_disconnect (OGON_IF (self->handler),
+                                 &return_value,
+                                 hCard,
+                                 dwDisposition,
+                                 error) == TRUE)
+    {
+      g_object_set (result_struct, "success", return_value, NULL);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Disconnect",
+                                               T_REPLY,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (result_struct),
+                               output_protocol,
+                               error) != -1));
+    }
+    else
+    {
+      if (*error == NULL)
+        g_warning ("ogon.Disconnect implementation returned FALSE "
+                   "but did not set an error");
+
+      xception =
+        g_object_new (THRIFT_TYPE_APPLICATION_EXCEPTION,
+                      "type",    *error != NULL ? (*error)->code :
+                                 THRIFT_APPLICATION_EXCEPTION_ERROR_UNKNOWN,
+                      "message", *error != NULL ? (*error)->message : NULL,
+                      NULL);
+      g_clear_error (error);
+
+      result =
+        ((thrift_protocol_write_message_begin (output_protocol,
+                                               "Disconnect",
+                                               T_EXCEPTION,
+                                               sequence_id,
+                                               error) != -1) &&
+         (thrift_struct_write (THRIFT_STRUCT (xception),
+                               output_protocol,
+                               error) != -1));
+
+      g_object_unref (xception);
+    }
+
+    g_object_unref (result_struct);
+
+    if (result == TRUE)
+      result =
+        ((thrift_protocol_write_message_end (output_protocol, error) != -1) &&
+         (thrift_transport_write_end (transport, error) != FALSE) &&
+         (thrift_transport_flush (transport, error) != FALSE));
+  }
+  else
+    result = FALSE;
+
+  g_object_unref (transport);
+  g_object_unref (args);
+
+  return result;
+}
+
+static gboolean
 ogon_processor_dispatch_call (ThriftDispatchProcessor *dispatch_processor,
                               ThriftProtocol *input_protocol,
                               ThriftProtocol *output_protocol,
@@ -887,7 +2133,7 @@ ogon_processor_init (ogonProcessor *self)
   self->handler = NULL;
   self->process_map = g_hash_table_new (g_str_hash, g_str_equal);
 
-  for (index = 0; index < 2; index += 1)
+  for (index = 0; index < 6; index += 1)
     g_hash_table_insert (self->process_map,
                          ogon_processor_process_function_defs[index].name,
                          &ogon_processor_process_function_defs[index]);

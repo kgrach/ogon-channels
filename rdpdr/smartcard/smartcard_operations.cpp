@@ -1,8 +1,8 @@
 #include "smartcard_operations.h"
 #include "QByteArrayWriteInteger.h"
-//#include <freerdp/channels/rdpdr.h>
 #include <ogon-channels/logging.h>
-//#include <qdatastream.h>
+
+//#include <locale> // для конвертера из UNICODE в ASCII
 
 #define TAG CWLOG_TAG("rdpdr_SCARD")
 
@@ -371,8 +371,9 @@ EstablishContext_Call::EstablishContext_Call() {
 
 void EstablishContext_Call::setResponse(QByteArray& buf){
 	quint32 objectBufferLength;
-	quint64 offset = 0; // в дампе памяти между размерностью контекста (_response._hContext._cbContext) и контекстом _response._hContext._pbContext) какие-то 8 байт. 
-						// Пока не понял, что это за данные. В док-ции написано cbContext от 0 до 16 байт. См. MS-RDPESC 2.2.1.1
+	quint64 offset = 0; // в дампе памяти между returnCode размерностью контекста (_response._hContext._cbContext) какие-то 8 байт. 
+						// Пока не понял, что это за данные. В док-ции написано cbContext от 0 до 16 байт. См. MS-RDPESC 2.2.1.1. 
+						// В freeRDP это значение заполняется в функции smartcard_pack_redir_scard_context
 	RdpStreamBuffer rsb(buf);
 	rsb.sealLength(buf.size());
 
@@ -386,12 +387,91 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 	}
 
 	rsb >> _response._returnCode;
-	rsb >> _response._hContext._cbContext;
 	rsb >> offset;
+	rsb >> _response._hContext._cbContext;
+	
 
 	auto startContext = rsb.pointer();
 	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hContext._cbContext) - sizeof(offset);
 	_response._hContext._pbContext = QByteArray(startContext, endContext); 
-	_response._hContext._pbContextReverse = _response._hContext._pbContext;
-	std::reverse(_response._hContext._pbContextReverse.begin(), _response._hContext._pbContextReverse.end());
+	// _response._hContext._pbContextReverse = _response._hContext._pbContext;
+	// std::reverse(_response._hContext._pbContextReverse.begin(), _response._hContext._pbContextReverse.end());
+}
+
+// MS-RDPESC 2.2.2.4
+ListReaders_Call::ListReaders_Call(quint64 hContext, quint32 ioControlCode) {
+	quint32 objectBufferLength = 0;
+	QByteArray padding;
+	quint64 offset = 562949953421320; // в дампе памяти между returnCode размерностью контекста (_response._hContext._cbContext) какие-то 8 байт. 
+						// Пока не понял, что это за данные. В док-ции написано cbContext от 0 до 16 байт. См. MS-RDPESC 2.2.1.1.
+						// 562949953421320 = 0x08 00 00 00 00 00 02 00 - в обратном порядке
+						// В freeRDP это значение заполняется в функции smartcard_pack_redir_scard_context
+	QByteArray tmpMszGroups; // 
+
+	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_hContext._cbContext = 8;
+	_cBytes = 36; // Захардкодил
+	tmpMszGroups.append(QByteArray::fromHex("04000200")); // Захардкодил - тоже пока не понятно, что это за значение
+	_mszGroups.append(QByteArray::fromHex("2400000053004300610072006400240041006c006c0052006500610064006500720073000000000000000000")); // Захардкодил текст 'SCard$AllReaders'
+	_fmszReadersIsNULL = 0;
+	_ccReaders = SCARD_AUTOALLOCATE;	
+
+	objectBufferLength = sizeof(offset) + sizeof(_cBytes) + tmpMszGroups.size() + sizeof(_fmszReadersIsNULL) 
+								+ sizeof(_ccReaders) + sizeof(_hContext._cbContext) + sizeof(hContext) + _mszGroups.size()
+								+ getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+								+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+								+ sizeof(offset) + sizeof(_cBytes) + tmpMszGroups.size() + sizeof(_fmszReadersIsNULL) 
+								+ sizeof(_ccReaders) + sizeof(_hContext._cbContext) + sizeof(hContext) + _mszGroups.size());
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+
+	_inputBuffer << offset;	
+	_inputBuffer << _cBytes;
+	_inputBuffer.append(tmpMszGroups);
+	_inputBuffer << _fmszReadersIsNULL;
+	_inputBuffer << _ccReaders;
+	_inputBuffer << _hContext._cbContext;
+	_inputBuffer << hContext; 
+	_inputBuffer.append(padding); 	
+	_inputBuffer.append(_mszGroups);
+	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+}
+
+void ListReaders_Call::setResponse(QByteArray& buf){
+	quint32 objectBufferLength;
+	quint64 offset = 0; // в дампе памяти между опять какие-то 8 байт между returnCode и cBytes. 
+						// Пока не понял, что это за данные. 
+						// В freeRDP это значение заполняется в функции smartcard_ndr_pointer_write для listReaders
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		return;
+	}
+
+	rsb >> _response._returnCode;
+	rsb >> offset;
+	rsb >> _response._cBytes;
+	
+	if(_ioControlCode == SCARD_IOCTL_LISTREADERSW){
+		QString unicodeStr;
+		bool res = rsb.readUnicodeString(unicodeStr,_response._cBytes);  
+
+		_response._msz = unicodeStr.toLatin1();
+		_response._cBytes = _response._cBytes / 2;
+
+	}
+	else {
+		auto start_msz = rsb.pointer();
+		auto end_msz = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._cBytes) - sizeof(offset);
+		_response._msz = QByteArray(start_msz, end_msz);
+	}
+	
 }

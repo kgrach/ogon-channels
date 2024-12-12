@@ -67,15 +67,15 @@
 #define SCARD_IOCTL_GETREADERICON RDP_SCARD_CTL_CODE(65)      /* SCardGetReaderIconA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 #define SCARD_IOCTL_GETDEVICETYPEID RDP_SCARD_CTL_CODE(66)    /* SCardGetDeviceTypeIdA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 
-#if defined SCARD_SCOPE_USER 
-#undef SCARD_SCOPE_USER
-#endif
-#if defined SCARD_SCOPE_TERMINAL 
-#undef SCARD_SCOPE_TERMINAL
-#endif
-#if defined SCARD_SCOPE_SYSTEM 
-#undef SCARD_SCOPE_SYSTEM
-#endif
+// #if defined SCARD_SCOPE_USER 
+// #undef SCARD_SCOPE_USER
+// #endif
+// #if defined SCARD_SCOPE_TERMINAL 
+// #undef SCARD_SCOPE_TERMINAL
+// #endif
+// #if defined SCARD_SCOPE_SYSTEM 
+// #undef SCARD_SCOPE_SYSTEM
+// #endif
 		
 
 // Интерфейс для всех возможных запросов
@@ -97,7 +97,7 @@ public:
 	virtual ~smartcardIOControl_Call() noexcept = default;
 
 	/*
-	*  getPadding - вернет размер наполнителя и заполнит нулями сам напонитель 
+	*  getPadding - вернет размер наполнителя и заполнит нулями сам наполнитель 
 	* 	size - размер буфера в который нужно добавить наполнитель (Padding), например _inputBuffer
 	* 	alignment - выравнивание для padding'а
 	*/
@@ -110,8 +110,8 @@ public:
 
 	virtual void setResponse(QByteArray& buf) = 0;
 	virtual qint64 getReturnCode() const = 0;
-	virtual const QByteArray& getReturnContext() const = 0;
-	virtual const QByteArray& getReturnReverseContext() const = 0;
+	virtual const QByteArray& getReturnReply() const = 0;
+//	virtual const QByteArray& getReturnReverseContext() const = 0;
 };
 
 class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
@@ -121,18 +121,18 @@ public:
 	virtual ~ScardAccessStartedEvent_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override {}
 	qint64 getReturnCode() const override {return 0; }
-	const QByteArray& getReturnContext() const override {}
-	const QByteArray& getReturnReverseContext() const override {}
+	const QByteArray& getReturnReply() const override {}
+//	const QByteArray& getReturnReverseContext() const override {}
 };
 
 class EstablishContext_Call : public smartcardIOControl_Call
 {
-	enum scope {
-		SCARD_SCOPE_USER = 0x00000000,
-		SCARD_SCOPE_TERMINAL = 0x00000001,
-		SCARD_SCOPE_SYSTEM = 0x00000002
-	};
-//	Handles_Call handles;
+	// enum scope {
+	// 	SCARD_SCOPE_USER = 0x00000000,
+	// 	SCARD_SCOPE_TERMINAL = 0x00000001,
+	// 	SCARD_SCOPE_SYSTEM = 0x00000002
+	// };
+
 	quint32 _dwScope;
 	EstablishContext_Return _response;
 
@@ -141,13 +141,27 @@ public:
 	virtual ~EstablishContext_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
-	const QByteArray& getReturnContext() const override {return _response._hContext._pbContext;}
-	const QByteArray& getReturnReverseContext() const override {return _response._hContext._pbContextReverse;}
+	const QByteArray& getReturnReply() const override {return _response._hContext._pbContext;}
+//	const QByteArray& getReturnReverseContext() const override {return _response._hContext._pbContextReverse;}
 };
 
 class ListReaders_Call :  public smartcardIOControl_Call {
-	// enum mszGroup {
-	// 	SCARD_IOCTL_LISTREADERSA
-	// }
+	REDIR_SCARDCONTEXT 	_hContext;
+	quint32 			_cBytes{0};
+	QByteArray 			_mszGroups;
+	quint32 			_fmszReadersIsNULL{0};
+	quint32				_ccReaders;
+
+	ListReaders_Return	_response;
+
+public:
+	ListReaders_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSW);
+	virtual ~ListReaders_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	qint64 getReturnCode() const override {return 0; }
+	const QByteArray& getReturnReply() const override {return _response._msz;}
+	quint32 getReturnCBytes() const {return _response._cBytes;}
+//	const QByteArray& getReturnReverseContext() const override {}
 };
 

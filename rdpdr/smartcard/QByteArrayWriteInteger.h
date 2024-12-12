@@ -13,6 +13,11 @@ typedef union{
     uint16_t u16s[2];
 }uint16_32_t;
 
+typedef union{
+    uint64_t u64;
+    uint32_t u32s[2];
+}uint32_64_t;
+
 // little-endian
 QByteArray &operator<<(QByteArray &l, quint8 r){
     l.append(r);
@@ -29,4 +34,10 @@ QByteArray &operator<<(QByteArray &l, quint16 r){
 QByteArray &operator<<(QByteArray &l, quint32 r){
     const uint16_32_t v= {.u32=r};
     return l<<v.u16s[0]<<v.u16s[1];
+}
+
+// little-endian
+QByteArray &operator<<(QByteArray &l, quint64 r){
+    const uint32_64_t v= {.u64=r};
+    return l<<v.u32s[0]<<v.u32s[1];
 }

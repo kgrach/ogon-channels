@@ -14,7 +14,7 @@ class REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
 public:	
 	quint32 _cbContext; 			// The number of bytes in the _pbContext
 	QByteArray _pbContext; 			// littleEndian
-	QByteArray _pbContextReverse; 	// bigEndian
+//	QByteArray _pbContextReverse; 	// bigEndian
 };
 
 class REDIR_SCARDHANDLE
@@ -31,10 +31,11 @@ public:
 
 class Long_Return
 {
+public:
 	qint32 _returnCode;
 };
 
-class longAndMultiString_Return
+struct longAndMultiString_Return
 {
 	qint32 _returnCode;
 	quint32 _cBytes;
@@ -52,3 +53,5 @@ public:
 // 	void setReturnCode(qint32 ret);
 // 	void setContext(const QByteArray& context);
 }; 
+
+typedef longAndMultiString_Return ListReaders_Return;

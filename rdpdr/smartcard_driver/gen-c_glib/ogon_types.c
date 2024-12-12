@@ -286,6 +286,236 @@ return_ec_get_type (void)
   return type;
 }
 
+enum _return_rcProperties
+{
+  PROP_RETURN_RC_0,
+  PROP_RETURN_RC_RET_VALUE
+};
+
+/* reads a return_rc object */
+static gint32
+return_rc_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  return_rc * this_object = RETURN_RC(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->retValue, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_retValue = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+return_rc_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  return_rc * this_object = RETURN_RC(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "return_rc", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "retValue", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->retValue, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+return_rc_set_property (GObject *object,
+                        guint property_id,
+                        const GValue *value,
+                        GParamSpec *pspec)
+{
+  return_rc *self = RETURN_RC (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_RC_RET_VALUE:
+      self->retValue = g_value_get_int64 (value);
+      self->__isset_retValue = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+return_rc_get_property (GObject *object,
+                        guint property_id,
+                        GValue *value,
+                        GParamSpec *pspec)
+{
+  return_rc *self = RETURN_RC (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_RC_RET_VALUE:
+      g_value_set_int64 (value, self->retValue);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+return_rc_instance_init (return_rc * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->retValue = 0;
+  object->__isset_retValue = FALSE;
+}
+
+static void 
+return_rc_finalize (GObject *object)
+{
+  return_rc *tobject = RETURN_RC (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+return_rc_class_init (return_rcClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = return_rc_read;
+  struct_class->write = return_rc_write;
+
+  gobject_class->finalize = return_rc_finalize;
+  gobject_class->get_property = return_rc_get_property;
+  gobject_class->set_property = return_rc_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_RC_RET_VALUE,
+     g_param_spec_int64 ("retValue",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+return_rc_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (return_rcClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) return_rc_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (return_rc),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) return_rc_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "return_rcType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
 enum _return_lrProperties
 {
   PROP_RETURN_LR_0,
@@ -613,6 +843,859 @@ return_lr_get_type (void)
 
     type = g_type_register_static (THRIFT_TYPE_STRUCT, 
                                    "return_lrType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _return_cProperties
+{
+  PROP_RETURN_C_0,
+  PROP_RETURN_C_RET_VALUE,
+  PROP_RETURN_C_PH_CARD,
+  PROP_RETURN_C_PDW_ACTIVE_PROTOCOL
+};
+
+/* reads a return_c object */
+static gint32
+return_c_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  return_c * this_object = RETURN_C(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->retValue, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_retValue = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 2:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->phCard, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_phCard = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 3:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->pdwActiveProtocol, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_pdwActiveProtocol = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+return_c_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  return_c * this_object = RETURN_C(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "return_c", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "retValue", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->retValue, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "phCard", T_I64, 2, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->phCard, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pdwActiveProtocol", T_I64, 3, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->pdwActiveProtocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+return_c_set_property (GObject *object,
+                       guint property_id,
+                       const GValue *value,
+                       GParamSpec *pspec)
+{
+  return_c *self = RETURN_C (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_C_RET_VALUE:
+      self->retValue = g_value_get_int64 (value);
+      self->__isset_retValue = TRUE;
+      break;
+
+    case PROP_RETURN_C_PH_CARD:
+      self->phCard = g_value_get_int64 (value);
+      self->__isset_phCard = TRUE;
+      break;
+
+    case PROP_RETURN_C_PDW_ACTIVE_PROTOCOL:
+      self->pdwActiveProtocol = g_value_get_int64 (value);
+      self->__isset_pdwActiveProtocol = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+return_c_get_property (GObject *object,
+                       guint property_id,
+                       GValue *value,
+                       GParamSpec *pspec)
+{
+  return_c *self = RETURN_C (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_C_RET_VALUE:
+      g_value_set_int64 (value, self->retValue);
+      break;
+
+    case PROP_RETURN_C_PH_CARD:
+      g_value_set_int64 (value, self->phCard);
+      break;
+
+    case PROP_RETURN_C_PDW_ACTIVE_PROTOCOL:
+      g_value_set_int64 (value, self->pdwActiveProtocol);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+return_c_instance_init (return_c * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->retValue = 0;
+  object->__isset_retValue = FALSE;
+  object->phCard = 0;
+  object->__isset_phCard = FALSE;
+  object->pdwActiveProtocol = 0;
+  object->__isset_pdwActiveProtocol = FALSE;
+}
+
+static void 
+return_c_finalize (GObject *object)
+{
+  return_c *tobject = RETURN_C (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+return_c_class_init (return_cClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = return_c_read;
+  struct_class->write = return_c_write;
+
+  gobject_class->finalize = return_c_finalize;
+  gobject_class->get_property = return_c_get_property;
+  gobject_class->set_property = return_c_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_C_RET_VALUE,
+     g_param_spec_int64 ("retValue",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_C_PH_CARD,
+     g_param_spec_int64 ("phCard",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_C_PDW_ACTIVE_PROTOCOL,
+     g_param_spec_int64 ("pdwActiveProtocol",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+return_c_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (return_cClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) return_c_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (return_c),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) return_c_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "return_cType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _return_sProperties
+{
+  PROP_RETURN_S_0,
+  PROP_RETURN_S_RET_VALUE,
+  PROP_RETURN_S_SZ_READER_NAME,
+  PROP_RETURN_S_PCCH_READER_LEN,
+  PROP_RETURN_S_PDW_STATE,
+  PROP_RETURN_S_PDW_PROTOCOL,
+  PROP_RETURN_S_PB_ATR,
+  PROP_RETURN_S_PCB_ATR_LEN
+};
+
+/* reads a return_s object */
+static gint32
+return_s_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  return_s * this_object = RETURN_S(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->retValue, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_retValue = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 2:
+        if (ftype == T_STRING)
+        {
+          if (this_object->szReaderName != NULL)
+          {
+            g_free(this_object->szReaderName);
+            this_object->szReaderName = NULL;
+          }
+
+          if ((ret = thrift_protocol_read_string (protocol, &this_object->szReaderName, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_szReaderName = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 3:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->pcchReaderLen, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_pcchReaderLen = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 4:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->pdwState, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_pdwState = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 5:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->pdwProtocol, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_pdwProtocol = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 6:
+        if (ftype == T_STRING)
+        {
+          if (this_object->pbAtr != NULL)
+          {
+            g_free(this_object->pbAtr);
+            this_object->pbAtr = NULL;
+          }
+
+          if ((ret = thrift_protocol_read_binary (protocol, &data, &len, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->pbAtr = g_byte_array_new();
+          g_byte_array_append (this_object->pbAtr, (guint8 *) data, (guint) len);
+          g_free (data);
+          this_object->__isset_pbAtr = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 7:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->pcbAtrLen, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_pcbAtrLen = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+return_s_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  return_s * this_object = RETURN_S(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "return_s", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "retValue", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->retValue, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "szReaderName", T_STRING, 2, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_string (protocol, this_object->szReaderName, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pcchReaderLen", T_I64, 3, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->pcchReaderLen, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pdwState", T_I64, 4, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->pdwState, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pdwProtocol", T_I64, 5, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->pdwProtocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pbAtr", T_STRING, 6, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_binary (protocol, this_object->pbAtr ? ((GByteArray *) this_object->pbAtr)->data : NULL, this_object->pbAtr ? ((GByteArray *) this_object->pbAtr)->len : 0, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "pcbAtrLen", T_I64, 7, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->pcbAtrLen, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+return_s_set_property (GObject *object,
+                       guint property_id,
+                       const GValue *value,
+                       GParamSpec *pspec)
+{
+  return_s *self = RETURN_S (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_S_RET_VALUE:
+      self->retValue = g_value_get_int64 (value);
+      self->__isset_retValue = TRUE;
+      break;
+
+    case PROP_RETURN_S_SZ_READER_NAME:
+      if (self->szReaderName != NULL)
+        g_free (self->szReaderName);
+      self->szReaderName = g_value_dup_string (value);
+      self->__isset_szReaderName = TRUE;
+      break;
+
+    case PROP_RETURN_S_PCCH_READER_LEN:
+      self->pcchReaderLen = g_value_get_int64 (value);
+      self->__isset_pcchReaderLen = TRUE;
+      break;
+
+    case PROP_RETURN_S_PDW_STATE:
+      self->pdwState = g_value_get_int64 (value);
+      self->__isset_pdwState = TRUE;
+      break;
+
+    case PROP_RETURN_S_PDW_PROTOCOL:
+      self->pdwProtocol = g_value_get_int64 (value);
+      self->__isset_pdwProtocol = TRUE;
+      break;
+
+    case PROP_RETURN_S_PB_ATR:
+      if (self->pbAtr != NULL)
+        g_byte_array_unref (self->pbAtr);
+      self->pbAtr = g_value_dup_boxed (value);
+      self->__isset_pbAtr = TRUE;
+      break;
+
+    case PROP_RETURN_S_PCB_ATR_LEN:
+      self->pcbAtrLen = g_value_get_int64 (value);
+      self->__isset_pcbAtrLen = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+return_s_get_property (GObject *object,
+                       guint property_id,
+                       GValue *value,
+                       GParamSpec *pspec)
+{
+  return_s *self = RETURN_S (object);
+
+  switch (property_id)
+  {
+    case PROP_RETURN_S_RET_VALUE:
+      g_value_set_int64 (value, self->retValue);
+      break;
+
+    case PROP_RETURN_S_SZ_READER_NAME:
+      g_value_set_string (value, self->szReaderName);
+      break;
+
+    case PROP_RETURN_S_PCCH_READER_LEN:
+      g_value_set_int64 (value, self->pcchReaderLen);
+      break;
+
+    case PROP_RETURN_S_PDW_STATE:
+      g_value_set_int64 (value, self->pdwState);
+      break;
+
+    case PROP_RETURN_S_PDW_PROTOCOL:
+      g_value_set_int64 (value, self->pdwProtocol);
+      break;
+
+    case PROP_RETURN_S_PB_ATR:
+      g_value_set_boxed (value, self->pbAtr);
+      break;
+
+    case PROP_RETURN_S_PCB_ATR_LEN:
+      g_value_set_int64 (value, self->pcbAtrLen);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+return_s_instance_init (return_s * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->retValue = 0;
+  object->__isset_retValue = FALSE;
+  object->szReaderName = NULL;
+  object->__isset_szReaderName = FALSE;
+  object->pcchReaderLen = 0;
+  object->__isset_pcchReaderLen = FALSE;
+  object->pdwState = 0;
+  object->__isset_pdwState = FALSE;
+  object->pdwProtocol = 0;
+  object->__isset_pdwProtocol = FALSE;
+  object->pbAtr = NULL;
+  object->__isset_pbAtr = FALSE;
+  object->pcbAtrLen = 0;
+  object->__isset_pcbAtrLen = FALSE;
+}
+
+static void 
+return_s_finalize (GObject *object)
+{
+  return_s *tobject = RETURN_S (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+  if (tobject->szReaderName != NULL)
+  {
+    g_free(tobject->szReaderName);
+    tobject->szReaderName = NULL;
+  }
+  if (tobject->pbAtr != NULL)
+  {
+    thrift_string_free(tobject->pbAtr);
+    tobject->pbAtr = NULL;
+  }
+}
+
+static void
+return_s_class_init (return_sClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = return_s_read;
+  struct_class->write = return_s_write;
+
+  gobject_class->finalize = return_s_finalize;
+  gobject_class->get_property = return_s_get_property;
+  gobject_class->set_property = return_s_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_RET_VALUE,
+     g_param_spec_int64 ("retValue",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_SZ_READER_NAME,
+     g_param_spec_string ("szReaderName",
+                          NULL,
+                          NULL,
+                          NULL,
+                          G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_PCCH_READER_LEN,
+     g_param_spec_int64 ("pcchReaderLen",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_PDW_STATE,
+     g_param_spec_int64 ("pdwState",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_PDW_PROTOCOL,
+     g_param_spec_int64 ("pdwProtocol",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_PB_ATR,
+     g_param_spec_boxed ("pbAtr",
+                         NULL,
+                         NULL,
+                         G_TYPE_BYTE_ARRAY,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_RETURN_S_PCB_ATR_LEN,
+     g_param_spec_int64 ("pcbAtrLen",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+return_s_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (return_sClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) return_s_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (return_s),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) return_s_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "return_sType",
                                    &type_info, 0);
   }
 
@@ -1553,6 +2636,2063 @@ ogon_list_readers_result_get_type (void)
 
     type = g_type_register_static (THRIFT_TYPE_STRUCT, 
                                    "ogonListReadersResultType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonConnectArgsProperties
+{
+  PROP_OGON_CONNECT_ARGS_0,
+  PROP_OGON_CONNECT_ARGS_H_CONTEXT,
+  PROP_OGON_CONNECT_ARGS_SZ_READER,
+  PROP_OGON_CONNECT_ARGS_DW_SHARE_MODE,
+  PROP_OGON_CONNECT_ARGS_DW_PREFERRED_PROTOCOLS
+};
+
+/* reads a ogon_connect_args object */
+static gint32
+ogon_connect_args_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonConnectArgs * this_object = OGON_CONNECT_ARGS(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->hContext, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_hContext = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 2:
+        if (ftype == T_STRING)
+        {
+          if (this_object->szReader != NULL)
+          {
+            g_free(this_object->szReader);
+            this_object->szReader = NULL;
+          }
+
+          if ((ret = thrift_protocol_read_string (protocol, &this_object->szReader, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_szReader = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 3:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->dwShareMode, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_dwShareMode = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 4:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->dwPreferredProtocols, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_dwPreferredProtocols = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_connect_args_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonConnectArgs * this_object = OGON_CONNECT_ARGS(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonConnectArgs", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "hContext", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->hContext, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "szReader", T_STRING, 2, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_string (protocol, this_object->szReader, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "dwShareMode", T_I64, 3, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->dwShareMode, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "dwPreferredProtocols", T_I64, 4, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->dwPreferredProtocols, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_connect_args_set_property (GObject *object,
+                                guint property_id,
+                                const GValue *value,
+                                GParamSpec *pspec)
+{
+  ogonConnectArgs *self = OGON_CONNECT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_CONNECT_ARGS_H_CONTEXT:
+      self->hContext = g_value_get_int64 (value);
+      self->__isset_hContext = TRUE;
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_SZ_READER:
+      if (self->szReader != NULL)
+        g_free (self->szReader);
+      self->szReader = g_value_dup_string (value);
+      self->__isset_szReader = TRUE;
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_DW_SHARE_MODE:
+      self->dwShareMode = g_value_get_int64 (value);
+      self->__isset_dwShareMode = TRUE;
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_DW_PREFERRED_PROTOCOLS:
+      self->dwPreferredProtocols = g_value_get_int64 (value);
+      self->__isset_dwPreferredProtocols = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_connect_args_get_property (GObject *object,
+                                guint property_id,
+                                GValue *value,
+                                GParamSpec *pspec)
+{
+  ogonConnectArgs *self = OGON_CONNECT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_CONNECT_ARGS_H_CONTEXT:
+      g_value_set_int64 (value, self->hContext);
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_SZ_READER:
+      g_value_set_string (value, self->szReader);
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_DW_SHARE_MODE:
+      g_value_set_int64 (value, self->dwShareMode);
+      break;
+
+    case PROP_OGON_CONNECT_ARGS_DW_PREFERRED_PROTOCOLS:
+      g_value_set_int64 (value, self->dwPreferredProtocols);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_connect_args_instance_init (ogonConnectArgs * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->hContext = 0;
+  object->__isset_hContext = FALSE;
+  object->szReader = NULL;
+  object->__isset_szReader = FALSE;
+  object->dwShareMode = 0;
+  object->__isset_dwShareMode = FALSE;
+  object->dwPreferredProtocols = 0;
+  object->__isset_dwPreferredProtocols = FALSE;
+}
+
+static void 
+ogon_connect_args_finalize (GObject *object)
+{
+  ogonConnectArgs *tobject = OGON_CONNECT_ARGS (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+  if (tobject->szReader != NULL)
+  {
+    g_free(tobject->szReader);
+    tobject->szReader = NULL;
+  }
+}
+
+static void
+ogon_connect_args_class_init (ogonConnectArgsClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_connect_args_read;
+  struct_class->write = ogon_connect_args_write;
+
+  gobject_class->finalize = ogon_connect_args_finalize;
+  gobject_class->get_property = ogon_connect_args_get_property;
+  gobject_class->set_property = ogon_connect_args_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_CONNECT_ARGS_H_CONTEXT,
+     g_param_spec_int64 ("hContext",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_CONNECT_ARGS_SZ_READER,
+     g_param_spec_string ("szReader",
+                          NULL,
+                          NULL,
+                          NULL,
+                          G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_CONNECT_ARGS_DW_SHARE_MODE,
+     g_param_spec_int64 ("dwShareMode",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_CONNECT_ARGS_DW_PREFERRED_PROTOCOLS,
+     g_param_spec_int64 ("dwPreferredProtocols",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_connect_args_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonConnectArgsClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_connect_args_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonConnectArgs),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_connect_args_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonConnectArgsType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonConnectResultProperties
+{
+  PROP_OGON_CONNECT_RESULT_0,
+  PROP_OGON_CONNECT_RESULT_SUCCESS
+};
+
+/* reads a ogon_connect_result object */
+static gint32
+ogon_connect_result_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonConnectResult * this_object = OGON_CONNECT_RESULT(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 0:
+        if (ftype == T_STRUCT)
+        {
+          if ((ret = thrift_struct_read (THRIFT_STRUCT (this_object->success), protocol, error)) < 0)
+          {
+            return -1;
+          }
+          xfer += ret;
+          this_object->__isset_success = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_connect_result_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonConnectResult * this_object = OGON_CONNECT_RESULT(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonConnectResult", error)) < 0)
+    return -1;
+  xfer += ret;
+  if (this_object->__isset_success == TRUE) {
+    if ((ret = thrift_protocol_write_field_begin (protocol, "success", T_STRUCT, 0, error)) < 0)
+      return -1;
+    xfer += ret;
+    if ((ret = thrift_struct_write (THRIFT_STRUCT (this_object->success), protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_connect_result_set_property (GObject *object,
+                                  guint property_id,
+                                  const GValue *value,
+                                  GParamSpec *pspec)
+{
+  ogonConnectResult *self = OGON_CONNECT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_CONNECT_RESULT_SUCCESS:
+      if (self->success != NULL)
+        g_object_unref (self->success);
+      self->success = g_value_dup_object (value);
+      self->__isset_success = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_connect_result_get_property (GObject *object,
+                                  guint property_id,
+                                  GValue *value,
+                                  GParamSpec *pspec)
+{
+  ogonConnectResult *self = OGON_CONNECT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_CONNECT_RESULT_SUCCESS:
+      g_value_set_object (value, self->success);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_connect_result_instance_init (ogonConnectResult * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->success = g_object_new (TYPE_RETURN_C, NULL);
+  object->__isset_success = FALSE;
+}
+
+static void 
+ogon_connect_result_finalize (GObject *object)
+{
+  ogonConnectResult *tobject = OGON_CONNECT_RESULT (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+  if (tobject->success != NULL)
+  {
+    g_object_unref(tobject->success);
+    tobject->success = NULL;
+  }
+}
+
+static void
+ogon_connect_result_class_init (ogonConnectResultClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_connect_result_read;
+  struct_class->write = ogon_connect_result_write;
+
+  gobject_class->finalize = ogon_connect_result_finalize;
+  gobject_class->get_property = ogon_connect_result_get_property;
+  gobject_class->set_property = ogon_connect_result_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_CONNECT_RESULT_SUCCESS,
+     g_param_spec_object ("success",
+                         NULL,
+                         NULL,
+                         TYPE_RETURN_C,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_connect_result_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonConnectResultClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_connect_result_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonConnectResult),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_connect_result_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonConnectResultType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonStatusArgsProperties
+{
+  PROP_OGON_STATUS_ARGS_0,
+  PROP_OGON_STATUS_ARGS_H_CARD
+};
+
+/* reads a ogon_status_args object */
+static gint32
+ogon_status_args_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonStatusArgs * this_object = OGON_STATUS_ARGS(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->hCard, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_hCard = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_status_args_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonStatusArgs * this_object = OGON_STATUS_ARGS(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonStatusArgs", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "hCard", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->hCard, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_status_args_set_property (GObject *object,
+                               guint property_id,
+                               const GValue *value,
+                               GParamSpec *pspec)
+{
+  ogonStatusArgs *self = OGON_STATUS_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_STATUS_ARGS_H_CARD:
+      self->hCard = g_value_get_int64 (value);
+      self->__isset_hCard = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_status_args_get_property (GObject *object,
+                               guint property_id,
+                               GValue *value,
+                               GParamSpec *pspec)
+{
+  ogonStatusArgs *self = OGON_STATUS_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_STATUS_ARGS_H_CARD:
+      g_value_set_int64 (value, self->hCard);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_status_args_instance_init (ogonStatusArgs * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->hCard = 0;
+  object->__isset_hCard = FALSE;
+}
+
+static void 
+ogon_status_args_finalize (GObject *object)
+{
+  ogonStatusArgs *tobject = OGON_STATUS_ARGS (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+ogon_status_args_class_init (ogonStatusArgsClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_status_args_read;
+  struct_class->write = ogon_status_args_write;
+
+  gobject_class->finalize = ogon_status_args_finalize;
+  gobject_class->get_property = ogon_status_args_get_property;
+  gobject_class->set_property = ogon_status_args_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_STATUS_ARGS_H_CARD,
+     g_param_spec_int64 ("hCard",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_status_args_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonStatusArgsClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_status_args_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonStatusArgs),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_status_args_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonStatusArgsType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonStatusResultProperties
+{
+  PROP_OGON_STATUS_RESULT_0,
+  PROP_OGON_STATUS_RESULT_SUCCESS
+};
+
+/* reads a ogon_status_result object */
+static gint32
+ogon_status_result_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonStatusResult * this_object = OGON_STATUS_RESULT(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 0:
+        if (ftype == T_STRUCT)
+        {
+          if ((ret = thrift_struct_read (THRIFT_STRUCT (this_object->success), protocol, error)) < 0)
+          {
+            return -1;
+          }
+          xfer += ret;
+          this_object->__isset_success = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_status_result_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonStatusResult * this_object = OGON_STATUS_RESULT(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonStatusResult", error)) < 0)
+    return -1;
+  xfer += ret;
+  if (this_object->__isset_success == TRUE) {
+    if ((ret = thrift_protocol_write_field_begin (protocol, "success", T_STRUCT, 0, error)) < 0)
+      return -1;
+    xfer += ret;
+    if ((ret = thrift_struct_write (THRIFT_STRUCT (this_object->success), protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_status_result_set_property (GObject *object,
+                                 guint property_id,
+                                 const GValue *value,
+                                 GParamSpec *pspec)
+{
+  ogonStatusResult *self = OGON_STATUS_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_STATUS_RESULT_SUCCESS:
+      if (self->success != NULL)
+        g_object_unref (self->success);
+      self->success = g_value_dup_object (value);
+      self->__isset_success = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_status_result_get_property (GObject *object,
+                                 guint property_id,
+                                 GValue *value,
+                                 GParamSpec *pspec)
+{
+  ogonStatusResult *self = OGON_STATUS_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_STATUS_RESULT_SUCCESS:
+      g_value_set_object (value, self->success);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_status_result_instance_init (ogonStatusResult * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->success = g_object_new (TYPE_RETURN_S, NULL);
+  object->__isset_success = FALSE;
+}
+
+static void 
+ogon_status_result_finalize (GObject *object)
+{
+  ogonStatusResult *tobject = OGON_STATUS_RESULT (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+  if (tobject->success != NULL)
+  {
+    g_object_unref(tobject->success);
+    tobject->success = NULL;
+  }
+}
+
+static void
+ogon_status_result_class_init (ogonStatusResultClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_status_result_read;
+  struct_class->write = ogon_status_result_write;
+
+  gobject_class->finalize = ogon_status_result_finalize;
+  gobject_class->get_property = ogon_status_result_get_property;
+  gobject_class->set_property = ogon_status_result_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_STATUS_RESULT_SUCCESS,
+     g_param_spec_object ("success",
+                         NULL,
+                         NULL,
+                         TYPE_RETURN_S,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_status_result_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonStatusResultClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_status_result_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonStatusResult),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_status_result_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonStatusResultType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonReleaseContextArgsProperties
+{
+  PROP_OGON_RELEASE_CONTEXT_ARGS_0,
+  PROP_OGON_RELEASE_CONTEXT_ARGS_H_CONTEXT
+};
+
+/* reads a ogon_release_context_args object */
+static gint32
+ogon_release_context_args_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonReleaseContextArgs * this_object = OGON_RELEASE_CONTEXT_ARGS(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->hContext, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_hContext = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_release_context_args_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonReleaseContextArgs * this_object = OGON_RELEASE_CONTEXT_ARGS(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonReleaseContextArgs", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "hContext", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->hContext, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_release_context_args_set_property (GObject *object,
+                                        guint property_id,
+                                        const GValue *value,
+                                        GParamSpec *pspec)
+{
+  ogonReleaseContextArgs *self = OGON_RELEASE_CONTEXT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_RELEASE_CONTEXT_ARGS_H_CONTEXT:
+      self->hContext = g_value_get_int64 (value);
+      self->__isset_hContext = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_release_context_args_get_property (GObject *object,
+                                        guint property_id,
+                                        GValue *value,
+                                        GParamSpec *pspec)
+{
+  ogonReleaseContextArgs *self = OGON_RELEASE_CONTEXT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_RELEASE_CONTEXT_ARGS_H_CONTEXT:
+      g_value_set_int64 (value, self->hContext);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_release_context_args_instance_init (ogonReleaseContextArgs * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->hContext = 0;
+  object->__isset_hContext = FALSE;
+}
+
+static void 
+ogon_release_context_args_finalize (GObject *object)
+{
+  ogonReleaseContextArgs *tobject = OGON_RELEASE_CONTEXT_ARGS (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+ogon_release_context_args_class_init (ogonReleaseContextArgsClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_release_context_args_read;
+  struct_class->write = ogon_release_context_args_write;
+
+  gobject_class->finalize = ogon_release_context_args_finalize;
+  gobject_class->get_property = ogon_release_context_args_get_property;
+  gobject_class->set_property = ogon_release_context_args_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_RELEASE_CONTEXT_ARGS_H_CONTEXT,
+     g_param_spec_int64 ("hContext",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_release_context_args_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonReleaseContextArgsClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_release_context_args_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonReleaseContextArgs),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_release_context_args_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonReleaseContextArgsType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonReleaseContextResultProperties
+{
+  PROP_OGON_RELEASE_CONTEXT_RESULT_0,
+  PROP_OGON_RELEASE_CONTEXT_RESULT_SUCCESS
+};
+
+/* reads a ogon_release_context_result object */
+static gint32
+ogon_release_context_result_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonReleaseContextResult * this_object = OGON_RELEASE_CONTEXT_RESULT(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 0:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->success, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_success = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_release_context_result_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonReleaseContextResult * this_object = OGON_RELEASE_CONTEXT_RESULT(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonReleaseContextResult", error)) < 0)
+    return -1;
+  xfer += ret;
+  if (this_object->__isset_success == TRUE) {
+    if ((ret = thrift_protocol_write_field_begin (protocol, "success", T_I64, 0, error)) < 0)
+      return -1;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, this_object->success, error)) < 0)
+      return -1;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_release_context_result_set_property (GObject *object,
+                                          guint property_id,
+                                          const GValue *value,
+                                          GParamSpec *pspec)
+{
+  ogonReleaseContextResult *self = OGON_RELEASE_CONTEXT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_RELEASE_CONTEXT_RESULT_SUCCESS:
+      self->success = g_value_get_int64 (value);
+      self->__isset_success = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_release_context_result_get_property (GObject *object,
+                                          guint property_id,
+                                          GValue *value,
+                                          GParamSpec *pspec)
+{
+  ogonReleaseContextResult *self = OGON_RELEASE_CONTEXT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_RELEASE_CONTEXT_RESULT_SUCCESS:
+      g_value_set_int64 (value, self->success);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_release_context_result_instance_init (ogonReleaseContextResult * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->success = 0;
+  object->__isset_success = FALSE;
+}
+
+static void 
+ogon_release_context_result_finalize (GObject *object)
+{
+  ogonReleaseContextResult *tobject = OGON_RELEASE_CONTEXT_RESULT (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+ogon_release_context_result_class_init (ogonReleaseContextResultClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_release_context_result_read;
+  struct_class->write = ogon_release_context_result_write;
+
+  gobject_class->finalize = ogon_release_context_result_finalize;
+  gobject_class->get_property = ogon_release_context_result_get_property;
+  gobject_class->set_property = ogon_release_context_result_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_RELEASE_CONTEXT_RESULT_SUCCESS,
+     g_param_spec_int64 ("success",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_release_context_result_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonReleaseContextResultClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_release_context_result_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonReleaseContextResult),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_release_context_result_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonReleaseContextResultType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonDisconnectArgsProperties
+{
+  PROP_OGON_DISCONNECT_ARGS_0,
+  PROP_OGON_DISCONNECT_ARGS_H_CARD,
+  PROP_OGON_DISCONNECT_ARGS_DW_DISPOSITION
+};
+
+/* reads a ogon_disconnect_args object */
+static gint32
+ogon_disconnect_args_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonDisconnectArgs * this_object = OGON_DISCONNECT_ARGS(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 1:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->hCard, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_hCard = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      case 2:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->dwDisposition, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_dwDisposition = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_disconnect_args_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonDisconnectArgs * this_object = OGON_DISCONNECT_ARGS(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonDisconnectArgs", error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "hCard", T_I64, 1, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->hCard, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_begin (protocol, "dwDisposition", T_I64, 2, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_i64 (protocol, this_object->dwDisposition, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_disconnect_args_set_property (GObject *object,
+                                   guint property_id,
+                                   const GValue *value,
+                                   GParamSpec *pspec)
+{
+  ogonDisconnectArgs *self = OGON_DISCONNECT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_DISCONNECT_ARGS_H_CARD:
+      self->hCard = g_value_get_int64 (value);
+      self->__isset_hCard = TRUE;
+      break;
+
+    case PROP_OGON_DISCONNECT_ARGS_DW_DISPOSITION:
+      self->dwDisposition = g_value_get_int64 (value);
+      self->__isset_dwDisposition = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_disconnect_args_get_property (GObject *object,
+                                   guint property_id,
+                                   GValue *value,
+                                   GParamSpec *pspec)
+{
+  ogonDisconnectArgs *self = OGON_DISCONNECT_ARGS (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_DISCONNECT_ARGS_H_CARD:
+      g_value_set_int64 (value, self->hCard);
+      break;
+
+    case PROP_OGON_DISCONNECT_ARGS_DW_DISPOSITION:
+      g_value_set_int64 (value, self->dwDisposition);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_disconnect_args_instance_init (ogonDisconnectArgs * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->hCard = 0;
+  object->__isset_hCard = FALSE;
+  object->dwDisposition = 0;
+  object->__isset_dwDisposition = FALSE;
+}
+
+static void 
+ogon_disconnect_args_finalize (GObject *object)
+{
+  ogonDisconnectArgs *tobject = OGON_DISCONNECT_ARGS (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+ogon_disconnect_args_class_init (ogonDisconnectArgsClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_disconnect_args_read;
+  struct_class->write = ogon_disconnect_args_write;
+
+  gobject_class->finalize = ogon_disconnect_args_finalize;
+  gobject_class->get_property = ogon_disconnect_args_get_property;
+  gobject_class->set_property = ogon_disconnect_args_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_DISCONNECT_ARGS_H_CARD,
+     g_param_spec_int64 ("hCard",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_DISCONNECT_ARGS_DW_DISPOSITION,
+     g_param_spec_int64 ("dwDisposition",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_disconnect_args_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonDisconnectArgsClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_disconnect_args_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonDisconnectArgs),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_disconnect_args_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonDisconnectArgsType",
+                                   &type_info, 0);
+  }
+
+  return type;
+}
+
+enum _ogonDisconnectResultProperties
+{
+  PROP_OGON_DISCONNECT_RESULT_0,
+  PROP_OGON_DISCONNECT_RESULT_SUCCESS
+};
+
+/* reads a ogon_disconnect_result object */
+static gint32
+ogon_disconnect_result_read (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+  gchar *name = NULL;
+  ThriftType ftype;
+  gint16 fid;
+  guint32 len = 0;
+  gpointer data = NULL;
+  ogonDisconnectResult * this_object = OGON_DISCONNECT_RESULT(object);
+
+  /* satisfy -Wall in case these aren't used */
+  THRIFT_UNUSED_VAR (len);
+  THRIFT_UNUSED_VAR (data);
+  THRIFT_UNUSED_VAR (this_object);
+
+  /* read the struct begin marker */
+  if ((ret = thrift_protocol_read_struct_begin (protocol, &name, error)) < 0)
+  {
+    if (name) g_free (name);
+    return -1;
+  }
+  xfer += ret;
+  if (name) g_free (name);
+  name = NULL;
+
+  /* read the struct fields */
+  while (1)
+  {
+    /* read the beginning of a field */
+    if ((ret = thrift_protocol_read_field_begin (protocol, &name, &ftype, &fid, error)) < 0)
+    {
+      if (name) g_free (name);
+      return -1;
+    }
+    xfer += ret;
+    if (name) g_free (name);
+    name = NULL;
+
+    /* break if we get a STOP field */
+    if (ftype == T_STOP)
+    {
+      break;
+    }
+
+    switch (fid)
+    {
+      case 0:
+        if (ftype == T_I64)
+        {
+          if ((ret = thrift_protocol_read_i64 (protocol, &this_object->success, error)) < 0)
+            return -1;
+          xfer += ret;
+          this_object->__isset_success = TRUE;
+        } else {
+          if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+            return -1;
+          xfer += ret;
+        }
+        break;
+      default:
+        if ((ret = thrift_protocol_skip (protocol, ftype, error)) < 0)
+          return -1;
+        xfer += ret;
+        break;
+    }
+    if ((ret = thrift_protocol_read_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+
+  if ((ret = thrift_protocol_read_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static gint32
+ogon_disconnect_result_write (ThriftStruct *object, ThriftProtocol *protocol, GError **error)
+{
+  gint32 ret;
+  gint32 xfer = 0;
+
+  ogonDisconnectResult * this_object = OGON_DISCONNECT_RESULT(object);
+  THRIFT_UNUSED_VAR (this_object);
+  if ((ret = thrift_protocol_write_struct_begin (protocol, "ogonDisconnectResult", error)) < 0)
+    return -1;
+  xfer += ret;
+  if (this_object->__isset_success == TRUE) {
+    if ((ret = thrift_protocol_write_field_begin (protocol, "success", T_I64, 0, error)) < 0)
+      return -1;
+    xfer += ret;
+    if ((ret = thrift_protocol_write_i64 (protocol, this_object->success, error)) < 0)
+      return -1;
+    xfer += ret;
+
+    if ((ret = thrift_protocol_write_field_end (protocol, error)) < 0)
+      return -1;
+    xfer += ret;
+  }
+  if ((ret = thrift_protocol_write_field_stop (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+  if ((ret = thrift_protocol_write_struct_end (protocol, error)) < 0)
+    return -1;
+  xfer += ret;
+
+  return xfer;
+}
+
+static void
+ogon_disconnect_result_set_property (GObject *object,
+                                     guint property_id,
+                                     const GValue *value,
+                                     GParamSpec *pspec)
+{
+  ogonDisconnectResult *self = OGON_DISCONNECT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_DISCONNECT_RESULT_SUCCESS:
+      self->success = g_value_get_int64 (value);
+      self->__isset_success = TRUE;
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+ogon_disconnect_result_get_property (GObject *object,
+                                     guint property_id,
+                                     GValue *value,
+                                     GParamSpec *pspec)
+{
+  ogonDisconnectResult *self = OGON_DISCONNECT_RESULT (object);
+
+  switch (property_id)
+  {
+    case PROP_OGON_DISCONNECT_RESULT_SUCCESS:
+      g_value_set_int64 (value, self->success);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void 
+ogon_disconnect_result_instance_init (ogonDisconnectResult * object)
+{
+  /* satisfy -Wall */
+  THRIFT_UNUSED_VAR (object);
+  object->success = 0;
+  object->__isset_success = FALSE;
+}
+
+static void 
+ogon_disconnect_result_finalize (GObject *object)
+{
+  ogonDisconnectResult *tobject = OGON_DISCONNECT_RESULT (object);
+
+  /* satisfy -Wall in case we don't use tobject */
+  THRIFT_UNUSED_VAR (tobject);
+}
+
+static void
+ogon_disconnect_result_class_init (ogonDisconnectResultClass * cls)
+{
+  GObjectClass *gobject_class = G_OBJECT_CLASS (cls);
+  ThriftStructClass *struct_class = THRIFT_STRUCT_CLASS (cls);
+
+  struct_class->read = ogon_disconnect_result_read;
+  struct_class->write = ogon_disconnect_result_write;
+
+  gobject_class->finalize = ogon_disconnect_result_finalize;
+  gobject_class->get_property = ogon_disconnect_result_get_property;
+  gobject_class->set_property = ogon_disconnect_result_set_property;
+
+  g_object_class_install_property
+    (gobject_class,
+     PROP_OGON_DISCONNECT_RESULT_SUCCESS,
+     g_param_spec_int64 ("success",
+                         NULL,
+                         NULL,
+                         G_MININT64,
+                         G_MAXINT64,
+                         0,
+                         G_PARAM_READWRITE));
+}
+
+GType
+ogon_disconnect_result_get_type (void)
+{
+  static GType type = 0;
+
+  if (type == 0) 
+  {
+    static const GTypeInfo type_info = 
+    {
+      sizeof (ogonDisconnectResultClass),
+      NULL, /* base_init */
+      NULL, /* base_finalize */
+      (GClassInitFunc) ogon_disconnect_result_class_init,
+      NULL, /* class_finalize */
+      NULL, /* class_data */
+      sizeof (ogonDisconnectResult),
+      0, /* n_preallocs */
+      (GInstanceInitFunc) ogon_disconnect_result_instance_init,
+      NULL, /* value_table */
+    };
+
+    type = g_type_register_static (THRIFT_TYPE_STRUCT, 
+                                   "ogonDisconnectResultType",
                                    &type_info, 0);
   }
 

@@ -7,7 +7,7 @@ if (UNIX)
 endif()
 
 find_package(PkgConfig)
-
+#pkg_check_modules(thrift REQUIRED thrift)
 pkg_check_modules(thrift REQUIRED thrift_c_glib)
 
 set(${MODULE_NAME}_SRCS
@@ -25,6 +25,8 @@ set(${MODULE_NAME}_SRCS
     smartcard_driver/gen-c_glib/ogon.h
 	smartcard_driver/gen-c_glib/ogon_types.c
     smartcard_driver/gen-c_glib/ogon.c
+	# smartcard_driver/gen-cpp/ogon_types.cpp
+    # smartcard_driver/gen-cpp/ogon.cpp
 	smartcard/smartcard_message.h	
 	global_vars.h
 	global_vars.cpp

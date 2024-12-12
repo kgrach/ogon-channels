@@ -2440,7 +2440,10 @@ void RDPDrChannelServer::SmartCardOperationsThread::run() {
 	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", establishContextCall->getIOctlString(false), ntStatus);
 	// }
 
-	// std::shared_ptr<smartcardIOControl_Call> listReadersCall = std::make_shared<ListReaders_Call>();
+	// const char* ctxt = establishContextCall->getReturnContext().data();
+  	// long *hContext = (long*) ctxt;
+
+	// std::shared_ptr<smartcardIOControl_Call> listReadersCall = std::make_shared<ListReaders_Call>(*hContext);
 	// if ((ntStatus = createHandle(listReadersCall))) {
 	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", listReadersCall->getIOctlString(false), ntStatus);
 	// }

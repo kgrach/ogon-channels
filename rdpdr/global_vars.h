@@ -8,6 +8,6 @@ extern RDPDrChannelServer *globalRDPDrChannelSmartCard;
 extern RDPDrChannelServer::RdpDrDevice *globalRdpDrDeviceSmartCard;
 extern RDPDrChannelServer::SmartCardOperationsThread *globalSmartCardOperationsThread;
 
-extern std::shared_ptr<smartcardIOControl_Call> globalEstablishContextCall;
+//extern std::shared_ptr<smartcardIOControl_Call> globalEstablishContextCall;
 
 //std::shared_ptr<smartcardIOControl_Call> globalListReadersCall = std::make_shared<ListReaders_Call>();
