@@ -1,282 +1,398 @@
 #include "thrift.h"
+#include "global_vars.h"
+
+#include "gen-cpp/ogon.h"
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/server/TSimpleServer.h>
+#include <thrift/transport/TServerSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+
+using namespace ::apache::thrift;
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
+using namespace ::apache::thrift::server;
+
+//#include <PCSC/winscard.h>
+#include <mutex>
+
+class ogonHandler : virtual public ogonIf {
+
+  // This is code for current project only, it don't need into ogon
+  // ------------- Begin -------------
+  std::mutex mtx_;
+  std::map<SCARDHANDLE, SCARDCONTEXT> Card2Context_;
+  // -------------  End  -------------
+
+public:
+  ogonHandler() {
+    // Your initialization goes here
+  }
+
+  void EstablishContext(return_ec& _return, const DWORD_RPC dwScope) {
+
+    // SCARDCONTEXT hContext;
+
+    // printf ("Server received SCardEstablishContext dwScope: %ld\n", dwScope);
+
+    // LONG rv = SCardEstablishContext(dwScope, NULL, NULL, &hContext);
+
+    // printf ("SCardEstablishContext return %ld, Server send hContext: %ld\n", rv, hContext);
+
+    // _return.cardContext = hContext;
+    // _return.retValue = rv;
+
+    std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
+    globalSmartCardOperationsThread->createHandle(establishContextCall);
+
+    const char* ctxt = establishContextCall->getReturnReply().data();
+    long *hContext = (long*) ctxt;
+    // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnContext().size();
+    // const char* tmpCtxt = ctxt;
+    // long *hContext = new long [ctxtSize];
+    // bzero(hContext,  sizeof(long));
+    // memcpy(hContext, tmpCtxt, ctxtSize);
+
+    // с реверсом байтов
+    //  const char* ctxt = globalEstablishContextCall->getReturnReverseContext().data();
+    // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnContext().size();
+    // const char* tmpCtxt = ctxt + 4; // сдвинем на 4 байта (пропустим 0x00000000)
+    // long *c = new long [ctxtSize];
+    // bzero(hContext,  sizeof(long));
+    // memcpy(hContext, tmpCtxt, ctxtSize);
+
+    _return.cardContext = *hContext;
+    _return.retValue = establishContextCall->getReturnCode();
+}
+
+  LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
+    printf("ReleaseContext\n");
+
+    printf ("Server received SCardReleaseContext dwScope: %ld\n", hContext);
+
+    LONG rv = SCardReleaseContext(hContext);
+
+    printf ("SCardReleaseContext return %ld\n", rv);
+
+    return rv;
+  }
+
+  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
+    // Your implementation goes here
+
+    LPSTR szReaderName = NULL;
+    DWORD szReaderNameLen = pcchReaders;
+
+    std::string readerBuf;
+
+    printf ("Server received SCardListReaders: SCARDCONTEXT=%ld\n", hContext);
+
+    if(SCARD_AUTOALLOCATE != szReaderNameLen) {
+      readerBuf.resize(szReaderNameLen);
+      szReaderName = readerBuf.data();
+    }
+
+    LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
+
+    printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, szReaderName);
+
+    _return.retValue = rv;
+    _return.mszReaders = szReaderName;
+
+    if(SCARD_AUTOALLOCATE == pcchReaders) {
+      SCardFreeMemory(hContext, szReaderName);
+    }
+  }
+
+  void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
+    // Your implementation goes here
+    LPSTR szGroups = NULL;
+    DWORD szGroupsNameLen = pcchGroups;
+
+    std::shared_ptr<std::string> readerBuff = nullptr;
+
+    if(SCARD_AUTOALLOCATE != szGroupsNameLen) {
+
+      readerBuff = std::make_shared<std::string>();
+      readerBuff->resize(szGroupsNameLen);
+      szGroups = readerBuff->data();
+    }
+
+    printf ("Server received SCardListReaderGroups: SCARDCONTEXT=%ld\n", hContext);
+
+    LONG rv = SCardListReaderGroups(hContext, (LPSTR)&szGroups, &szGroupsNameLen);
+
+    printf ("SCardListReaderGroups return %ld, Server send list groups=%s\n", rv, szGroups);
+
+    _return.retValue = rv;
+    _return.mszGroups = szGroups;
+
+    if(SCARD_AUTOALLOCATE == pcchGroups) {
+      SCardFreeMemory(hContext, szGroups);
+    }
+  }
+
+  void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
+
+    // Your implementation goes here
+    SCARDHANDLE phCard;
+    DWORD pdwActiveProtocol;
+
+    printf ("Server received SCardConnect: SCARDCONTEXT=%ld\n", hContext);
+
+    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
+
+    printf ("SCardConnect return %ld, Server send SCARDHANDLE=%ld\n", rv, phCard);
+
+    _return.retValue = rv;
+    _return.phCard = phCard;
+    _return.pdwActiveProtocol = pdwActiveProtocol;
+
+    // This is code for current project only, it don't need into ogon
+    // ------------- Begin -------------
+    std::lock_guard<std::mutex> lock(mtx_);
+    Card2Context_[phCard] = hContext;
+    // -------------  End  -------------
+  }
+
+  void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {
+    // Your implementation goes here
+    printf("Reconnect\n");
+    DWORD pdwActiveProtocol;
+
+    printf ("Server received SCardReconnect: SCARDHANDLE=%ld\n", hCard);
+
+    LONG rv = SCardReconnect(hCard, dwShareMode, dwPreferredProtocols, dwInitialization, &pdwActiveProtocol);
+
+    printf ("SCardReconnect return %ld, Server send pdwActiveProtocol=%ld\n", rv, pdwActiveProtocol);
+
+    _return.retValue = rv;
+    _return.pdwActiveProtocol = pdwActiveProtocol;
+  }
+
+  LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
+    // Your implementation goes here
+    printf("Disconnect\n");
+
+    printf ("Server received SCardDisconnect: SCARDHANDLE=%ld\n", hCard);
+
+    LONG rv = SCardDisconnect(hCard, dwDisposition);
+
+    printf ("SCardDisconnect return %ld\n", rv);
+
+    // This is code for current project only, it don't need into ogon
+    // ------------- Begin -------------
+    std::lock_guard<std::mutex> lock(mtx_);
+    Card2Context_.erase(hCard);
+    // -------------  End  -------------
+    
+    return rv;
+  }
+
+  void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {
+    // Your implementation goes here
+
+    DWORD pdwState;
+    DWORD pdwProtocol;
+
+    LPSTR szReaderName = NULL;
+    DWORD szReaderNameLen = pcchReaderLen;
+
+    std::shared_ptr<std::string> readerBuff = nullptr;
+
+    if(SCARD_AUTOALLOCATE != szReaderNameLen) {
+
+      readerBuff = std::make_shared<std::string>();
+      readerBuff->resize(szReaderNameLen);
+      szReaderName = readerBuff->data();
+    }
+
+    LPBYTE pAtr = NULL;
+    DWORD AtrLen = pcbAtrLen;
+
+    std::shared_ptr<std::string> atrBuff = nullptr;
+
+    if(SCARD_AUTOALLOCATE != AtrLen) {
+
+      atrBuff = std::make_shared<std::string>();
+      atrBuff->resize(AtrLen);
+      pAtr = (unsigned char*)atrBuff->data();
+    }
+
+    printf("Server received SCardStatus: SCARDHANDLE=%ld\n", hCard);
+
+    LONG rv = SCardStatus(hCard, szReaderName, &szReaderNameLen, &pdwState, &pdwProtocol, pAtr, &AtrLen);
+
+    _return.retValue = rv;
+    _return.szReaderName = szReaderName;
+    _return.pdwState = pdwState;
+    _return.pdwProtocol = pdwProtocol;
+    _return.pbAtr = std::string((char*)pAtr, AtrLen);
+
+    printf ("SCardStatus return %ld\n", rv);
+
+    // This is code for current project only, it don't need into ogon
+    // ------------- Begin -------------
+    if(SCARD_AUTOALLOCATE == pcbAtrLen) {
+      std::lock_guard<std::mutex> lock(mtx_);
+      SCARDCONTEXT hContext = Card2Context_[hCard];
+      SCardFreeMemory(hContext, pAtr);
+    }
+
+    if(SCARD_AUTOALLOCATE == pcchReaderLen) {
+      std::lock_guard<std::mutex> lock(mtx_);
+      SCARDCONTEXT hContext = Card2Context_[hCard];
+      SCardFreeMemory(hContext, szReaderName);
+    }
+    // -------------  End  -------------
+  }
+
+  void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
+    
+    std::vector<SCARD_READERSTATE> inReaderStates(cReaders);
+
+    for (int i = 0; i < cReaders; i++) {
+      inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
+      inReaderStates[i].dwCurrentState = rgReaderStates[i].dwCurrentState;
+      inReaderStates[i].dwEventState = rgReaderStates[i].dwEventState;
+      inReaderStates[i].cbAtr = rgReaderStates[i].rgbAtr.length();
+
+      memcpy(inReaderStates[i].rgbAtr, rgReaderStates[i].rgbAtr.data(), rgReaderStates[i].rgbAtr.length());
+    }
+
+    LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
+
+    std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
+
+    for (int i = 0; i < cReaders; i++) {
+      outReaderStates[i].szReader = inReaderStates[i].szReader;
+      outReaderStates[i].dwCurrentState = inReaderStates[i].dwCurrentState;
+      outReaderStates[i].dwEventState = inReaderStates[i].dwEventState;
+      outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
+    }
+
+    _return.retValue = rv;
+    _return.rgReaderStates = outReaderStates;
+  }
+
+  void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) {
+    // Your implementation goes here
+    printf("Transmit\n");
+    SCARD_IO_REQUEST ioSendPci, ioRecvPci;
+
+    LPCBYTE sendBuffer = (unsigned char*)pbSendBuffer.c_str();
+    DWORD sendBufferLength = pbSendBuffer.length();
+    DWORD recvBufferLength = pcbRecvLength;
+
+    std::vector<char> recv;
+
+    recv.resize(recvBufferLength);
+
+    ioSendPci.dwProtocol = pioSendPci.dwProtocol;
+    ioSendPci.cbPciLength = pioSendPci.cbPciLength;
+
+    printf("Server received SCardTransmit: SCARDHANDLE=%ld\n", hCard);
+
+    LONG rv = SCardTransmit(hCard, &ioSendPci, sendBuffer, sendBufferLength, &ioRecvPci, (unsigned char*)recv.data(), &recvBufferLength);
+
+    scard_io_request_rpc ioSendPciRPC;
+
+    ioSendPciRPC.dwProtocol = ioRecvPci.dwProtocol;
+    ioSendPciRPC.cbPciLength = ioRecvPci.cbPciLength;
+
+    _return.retValue = rv;
+    _return.pioRecvPci = ioSendPciRPC;
+    _return.pbRecvBuffer = std::string(recv.data(), recvBufferLength);
+
+    printf ("SCardTransmit return %ld\n", rv);
+  }
+
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {
+    // Your implementation goes here
+    printf("BeginTransaction\n");
+    return SCardBeginTransaction(hCard);
+  }
+
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
+    // Your implementation goes here
+    printf("EndTransaction\n");
+    return SCardEndTransaction(hCard, dwDisposition);
+  }
+
+  void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) {
+    // Your implementation goes here
+
+    LPBYTE pAttr = NULL;
+    DWORD AttrLen = pcbAttrLen;
+
+    std::shared_ptr<std::string> attrBuff = nullptr;
+
+    if(SCARD_AUTOALLOCATE != AttrLen) {
+
+      attrBuff = std::make_shared<std::string>();
+      attrBuff->resize(AttrLen);
+      pAttr = (unsigned char*)attrBuff->data();
+    }
+
+    printf("Server received SCardGetAttrib: hCard=%ld, pcbAttrLen=%ld\n", hCard, pcbAttrLen);
+
+    LONG rv = SCardGetAttrib(hCard, dwAttrId, pAttr, &AttrLen);
+
+    printf("SCardGetAttrib return %ld, pAttr=%p\n", rv, pAttr);
+
+    _return.retValue = rv;
+    _return.pbAttr = std::string((char*)pAttr, AttrLen);
 
 
-G_BEGIN_DECLS
+    // This is code for current project only, it don't need into ogon
+    // ------------- Begin -------------
+    if(SCARD_AUTOALLOCATE == pcbAttrLen) {
+      std::lock_guard<std::mutex> lock(mtx_);
+      SCARDCONTEXT hContext = Card2Context_[hCard];
+      SCardFreeMemory(hContext, pAttr);
+    }
+    // -------------  End  -------------
+  }
 
-#define TYPE_MY_OGON_HANDLER                          \
-  (my_ogon_handler_get_type ())
-#define MY_OGON_HANDLER(obj)                          \
-  (G_TYPE_CHECK_INSTANCE_CAST ((obj),                           \
-                               TYPE_MY_OGON_HANDLER,  \
-                               MyOgonHandler))
-#define MY_OGON_HANDLER_CLASS(c)                      \
-  (G_TYPE_CHECK_CLASS_CAST ((c),                                \
-                            TYPE_MY_OGON_HANDLER,     \
-                            MyOgonHandlerClass))
-#define IS_MY_OGON_HANDLER(obj)                       \
-  (G_TYPE_CHECK_INSTANCE_TYPE ((obj),                           \
-                               TYPE_MY_OGON_HANDLER))
-#define IS_MY_OGON_HANDLER_CLASS(c)                   \
-  (G_TYPE_CHECK_CLASS_TYPE ((c),                                \
-                            TYPE_MY_OGON_HANDLER))
-#define MY_OGON_HANDLER_GET_CLASS(obj)                \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj),                            \
-                              TYPE_MY_OGON_HANDLER,   \
-                              MyOgonHandlerClass))
+  void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) {
+    
+    DWORD BytesReturned;
+    std::string recvBuff;
 
-struct _MyOgonHandler {
-  ogonHandler parent_instance;
+    recvBuff.resize(cbRecvLength);
+
+    printf("Server received SCardControl: hCard=%ld, cbRecvLength=%ld\n", hCard, cbRecvLength);
+
+    LONG rv = SCardControl(hCard, dwControlCode, pbSendBuffer.data(), pbSendBuffer.size(),  recvBuff.data(), recvBuff.size(), &BytesReturned);
+
+    printf("SCardControl return %ld, BytesReturned=%ld\n", rv, BytesReturned);
+
+    _return.retValue = rv;
+    _return.pbRecvBuffer = std::string(recvBuff.data(), BytesReturned);
+  }
+  
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
+    printf("Cancel\n");
+    return SCardCancel(hContext);
+  }
+
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
+    printf("IsValidContext\n");
+    return SCardIsValidContext(hContext);
+  }
 };
-typedef struct _MyOgonHandler MyOgonHandler;
 
-struct _MyOgonHandlerClass {
-  ogonHandlerClass parent_class;
-};
-typedef struct _MyOgonHandlerClass MyOgonHandlerClass;
+void thrift_start_process() {
+  int port = 9093;
+  ::std::shared_ptr<ogonHandler> handler(new ogonHandler());
+  ::std::shared_ptr<TProcessor> processor(new ogonProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
-GType my_ogon_handler_get_type (void);
-
-G_END_DECLS
-
-G_DEFINE_TYPE (MyOgonHandler,
-               my_ogon_handler,
-               TYPE_OGON_HANDLER)
-
-static gboolean 
-my_ogon_handler_establish_context (ogonIf *iface, return_ec ** _return, const DWORD_RPC dwScope, GError **error) {
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
-  globalSmartCardOperationsThread->createHandle(establishContextCall);
-
-  const char* ctxt = establishContextCall->getReturnReply().data();
-  long *hContext = (long*) ctxt;
-  // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnReply().size();
-  // const char* tmpCtxt = ctxt;
-  // long *hContext = new long [ctxtSize];
-  // bzero(hContext,  sizeof(long));
-  // memcpy(hContext, tmpCtxt, ctxtSize);
-
-  // с реверсом байтов
-  //  const char* ctxt = globalEstablishContextCall->getReturnReverseContext().data();
-  // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnReply().size();
-  // const char* tmpCtxt = ctxt + 4; // сдвинем на 4 байта (пропустим 0x00000000)
-  // long *c = new long [ctxtSize];
-  // bzero(hContext,  sizeof(long));
-  // memcpy(hContext, tmpCtxt, ctxtSize);
-
-  
-
-  g_object_set(*_return,
-          "retValue", establishContextCall->getReturnCode(),
-          "cardContext", *hContext,      
-          NULL);
-
-  // delete(hContext);
-  return TRUE;
+  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
+  server.serve();
 }
 
-static gboolean 
-my_ogon_handler_release_context(ogonIf *iface, LONG_RPC* _return, const SCARDCONTEXT_RPC hContext, GError **error ){
-
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  // printf ("Server received SCardReleaseContext dwScope: %ld\n", hContext);
-
-	// LONG rv = SCardReleaseContext(hContext);
-
-  // printf ("SCardReleaseContext return %ld\n", rv);
-
-  // *_return = rv;
-
-  return TRUE;
-}
-
-static gboolean 
-my_ogon_handler_list_readers (ogonIf *iface, return_lr ** _return, const SCARDCONTEXT_RPC hContext, GError **error){
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  // LPSTR mszReaders = NULL;
-  // DWORD pcchReaders = SCARD_AUTOALLOCATE;
-
-  // printf ("Server received SCardListReaders: SCARDCONTEXT=%ld\n", hContext);
-
-	// LONG rv = SCardListReaders(hContext, NULL, (LPSTR)&mszReaders, &pcchReaders);
-
-  // printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, mszReaders);
-
-  // g_object_set(*_return,
-  //         "retValue", rv,
-  //         "mszReaders", mszReaders,
-  //         "pcchReaders", pcchReaders,
-  //         NULL);
-
-  // SCardFreeMemory(hContext, mszReaders);
-  
-  std::shared_ptr<ListReaders_Call> listReadersCall = std::make_shared<ListReaders_Call>(hContext);
-  globalSmartCardOperationsThread->createHandle(listReadersCall);
-
-  const char* mszReaders = listReadersCall->getReturnReply().data();
-//  long *mszReaders = (long*) mszRdrs;
-
-  g_object_set(*_return,
-          "retValue", listReadersCall->getReturnCode(),
-          "mszReaders", mszReaders,
-          "pcchReaders", listReadersCall->getReturnCBytes(),
-          NULL);
-  return TRUE;
-}
-
-static gboolean 
-my_ogon_handler_connect (ogonIf *iface, return_c ** _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, GError **error) {
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  // SCARDHANDLE phCard;
-  // DWORD pdwActiveProtocol;
-
-  // printf ("Server received SCardConnect: SCARDCONTEXT=%ld\n", hContext);
-
-	// LONG rv = SCardConnect(hContext, szReader, dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
-
-  // printf ("SCardConnect return %ld, Server send SCARDHANDLE=%ld\n", rv, phCard);
-
-  // g_object_set(*_return,
-  //         "retValue", rv,
-  //         "phCard", phCard,
-  //         "pdwActiveProtocol", pdwActiveProtocol,
-  //         NULL);
-  
-  return TRUE;
-}
-
-static gboolean
-my_ogon_handler_disconnect (ogonIf *iface, LONG_RPC* _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition, GError **error) {
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  // printf ("Server received SCardDisconnect: SCARDHANDLE=%ld\n", hCard);
-
-  // LONG rv = SCardDisconnect(hCard, dwDisposition);
-
-  // printf ("SCardDisconnect return %ld\n", rv);
-  
-  // *_return = rv;
-
-  return TRUE;
-}
-
-static gboolean 
-my_ogon_handler_status (ogonIf *iface, return_s ** _return, const SCARDHANDLE_RPC hCard, GError **error) {
-  THRIFT_UNUSED_VAR (iface);
-  THRIFT_UNUSED_VAR (error);
-
-  // char Reader[MAX_READERNAME];
-  // DWORD ReaderLen = MAX_READERNAME;
-  // DWORD pdwState;
-  // DWORD pdwProtocol;
-  // BYTE pbAtr[MAX_ATR_SIZE] = "";
-  // DWORD pcbAtrLen = MAX_ATR_SIZE;
-
-  
-
-  // printf("Server received SCardStatus: SCARDHANDLE=%ld\n", hCard);
-
-  // LONG rv = SCardStatus(hCard, Reader, &ReaderLen, &pdwState, &pdwProtocol, pbAtr, &pcbAtrLen);
-
-  // GByteArray *atr = g_byte_array_new();
-  // atr = g_byte_array_append(atr, pbAtr, pcbAtrLen);
-
-  // g_object_set(*_return,
-  //       "retValue", rv,
-  //       "szReaderName", Reader,
-  //       "pcchReaderLen", ReaderLen,
-  //       "pdwState", pdwState, 
-  //       "pdwProtocol", pdwProtocol,
-  //       "pcbAtrLen", pcbAtrLen,
-  //       "pbAtr", atr,
-  //       NULL);
-
-  // printf ("SCardStatus return %ld\n", rv);
-  
-
-  return TRUE;
-}
-
-static void
-my_ogon_handler_init (MyOgonHandler *self)
-{
-}
-
-static void
-my_ogon_handler_class_init (MyOgonHandlerClass *klass)
-{
-  ogonHandlerClass *ogon_handler_class =
-    OGON_HANDLER_CLASS (klass);
-
-  ogon_handler_class->establish_context =     my_ogon_handler_establish_context;
-  ogon_handler_class->release_context =       my_ogon_handler_release_context;
-  ogon_handler_class->list_readers =          my_ogon_handler_list_readers;
-  ogon_handler_class->connect =               my_ogon_handler_connect;
-  ogon_handler_class->disconnect =            my_ogon_handler_disconnect;
-  ogon_handler_class->status =                my_ogon_handler_status;
-
-}
-
-int thrift_start_process (void)
-{
-  ogonHandler *handler;
-  ogonProcessor *processor;
-
-  ThriftServerTransport *server_transport;
-  ThriftTransportFactory *transport_factory;
-  ThriftProtocolFactory *protocol_factory;
-  ThriftServer *server;
-
-  GError *error = NULL;
-
-#if (!GLIB_CHECK_VERSION (2, 36, 0))
-  g_type_init ();
-#endif
-
-  handler   = (ogonHandler*)g_object_new (TYPE_MY_OGON_HANDLER,
-                            NULL);
-  processor = (ogonProcessor*)g_object_new (TYPE_OGON_PROCESSOR,
-                            "handler", handler,
-                            NULL);
-
-  server_transport  = (ThriftServerTransport*)g_object_new (THRIFT_TYPE_SERVER_SOCKET,
-                                    "port", 9092,
-                                    NULL);
-  transport_factory = (ThriftTransportFactory*)g_object_new (THRIFT_TYPE_BUFFERED_TRANSPORT_FACTORY,
-                                    NULL);
-  protocol_factory  = (ThriftProtocolFactory*)g_object_new (THRIFT_TYPE_BINARY_PROTOCOL_FACTORY,
-                                    NULL);
-
-  server = (ThriftServer*)g_object_new (THRIFT_TYPE_SIMPLE_SERVER,
-                         "processor",                processor,
-                         "server_transport",         server_transport,
-                         "input_transport_factory",  transport_factory,
-                         "output_transport_factory", transport_factory,
-                         "input_protocol_factory",   protocol_factory,
-                         "output_protocol_factory",  protocol_factory,
-                         NULL);
-
-  thrift_server_serve (server, &error);
-
-  fprintf (stderr, "Client caught an exception: %s\n", error->message);
-  g_clear_error (&error);
-
-  g_object_unref (server);
-  g_object_unref (protocol_factory);
-  g_object_unref (transport_factory);
-  g_object_unref (server_transport);
-
-  g_object_unref (processor);
-  g_object_unref (handler);
-
-  return 0;
-}

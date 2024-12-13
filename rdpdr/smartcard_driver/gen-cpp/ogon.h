@@ -24,13 +24,20 @@ class ogonIf {
   virtual ~ogonIf() {}
   virtual void EstablishContext(return_ec& _return, const DWORD_RPC dwScope) = 0;
   virtual LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) = 0;
-  virtual void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext) = 0;
+  virtual void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) = 0;
+  virtual void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) = 0;
   virtual void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) = 0;
   virtual void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) = 0;
   virtual LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) = 0;
-  virtual void Status(return_s& _return, const SCARDHANDLE_RPC hCard) = 0;
+  virtual void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) = 0;
   virtual void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) = 0;
   virtual void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) = 0;
+  virtual LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) = 0;
+  virtual LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) = 0;
+  virtual void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) = 0;
+  virtual void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) = 0;
+  virtual LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) = 0;
+  virtual LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext) = 0;
 };
 
 class ogonIfFactory {
@@ -67,7 +74,10 @@ class ogonNull : virtual public ogonIf {
     LONG_RPC _return = 0;
     return _return;
   }
-  void ListReaders(return_lr& /* _return */, const SCARDCONTEXT_RPC /* hContext */) {
+  void ListReaders(return_lr& /* _return */, const SCARDCONTEXT_RPC /* hContext */, const DWORD_RPC /* pcchReaders */) {
+    return;
+  }
+  void ListReaderGroups(return_lrg& /* _return */, const SCARDCONTEXT_RPC /* hContext */, const DWORD_RPC /* pcchGroups */) {
     return;
   }
   void Connect(return_c& /* _return */, const SCARDCONTEXT_RPC /* hContext */, const LPCSTR_RPC& /* szReader */, const DWORD_RPC /* dwShareMode */, const DWORD_RPC /* dwPreferredProtocols */) {
@@ -80,7 +90,7 @@ class ogonNull : virtual public ogonIf {
     LONG_RPC _return = 0;
     return _return;
   }
-  void Status(return_s& /* _return */, const SCARDHANDLE_RPC /* hCard */) {
+  void Status(return_s& /* _return */, const SCARDHANDLE_RPC /* hCard */, const DWORD_RPC /* pcchReaderLen */, const DWORD_RPC /* pcbAtrLen */) {
     return;
   }
   void GetStatusChange(return_gsc& /* _return */, const SCARDCONTEXT_RPC /* hContext */, const DWORD_RPC /* dwTimeout */, const std::vector<scard_readerstate_rpc> & /* rgReaderStates */, const DWORD_RPC /* cReaders */) {
@@ -88,6 +98,28 @@ class ogonNull : virtual public ogonIf {
   }
   void Transmit(return_t& /* _return */, const SCARDHANDLE_RPC /* hCard */, const scard_io_request_rpc& /* pioSendPci */, const LPBYTE_RPC& /* pbSendBuffer */, const DWORD_RPC /* pcbRecvLength */) {
     return;
+  }
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC /* hCard */) {
+    LONG_RPC _return = 0;
+    return _return;
+  }
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC /* hCard */, const DWORD_RPC /* dwDisposition */) {
+    LONG_RPC _return = 0;
+    return _return;
+  }
+  void GetAttrib(return_ga& /* _return */, const SCARDHANDLE_RPC /* hCard */, const DWORD_RPC /* dwAttrId */, const DWORD_RPC /* pcbAttrLen */) {
+    return;
+  }
+  void Control(return_ctrl& /* _return */, const SCARDHANDLE_RPC /* hCard */, const DWORD_RPC /* dwControlCode */, const LPVOID_RPC& /* pbSendBuffer */, const DWORD_RPC /* cbRecvLength */) {
+    return;
+  }
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC /* hContext */) {
+    LONG_RPC _return = 0;
+    return _return;
+  }
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC /* hContext */) {
+    LONG_RPC _return = 0;
+    return _return;
   }
 };
 
@@ -300,8 +332,9 @@ class ogon_ReleaseContext_presult {
 };
 
 typedef struct _ogon_ListReaders_args__isset {
-  _ogon_ListReaders_args__isset() : hContext(false) {}
+  _ogon_ListReaders_args__isset() : hContext(false), pcchReaders(false) {}
   bool hContext :1;
+  bool pcchReaders :1;
 } _ogon_ListReaders_args__isset;
 
 class ogon_ListReaders_args {
@@ -309,19 +342,24 @@ class ogon_ListReaders_args {
 
   ogon_ListReaders_args(const ogon_ListReaders_args&);
   ogon_ListReaders_args& operator=(const ogon_ListReaders_args&);
-  ogon_ListReaders_args() : hContext(0) {
+  ogon_ListReaders_args() : hContext(0), pcchReaders(0) {
   }
 
   virtual ~ogon_ListReaders_args() noexcept;
   SCARDCONTEXT_RPC hContext;
+  DWORD_RPC pcchReaders;
 
   _ogon_ListReaders_args__isset __isset;
 
   void __set_hContext(const SCARDCONTEXT_RPC val);
 
+  void __set_pcchReaders(const DWORD_RPC val);
+
   bool operator == (const ogon_ListReaders_args & rhs) const
   {
     if (!(hContext == rhs.hContext))
+      return false;
+    if (!(pcchReaders == rhs.pcchReaders))
       return false;
     return true;
   }
@@ -343,6 +381,7 @@ class ogon_ListReaders_pargs {
 
   virtual ~ogon_ListReaders_pargs() noexcept;
   const SCARDCONTEXT_RPC* hContext;
+  const DWORD_RPC* pcchReaders;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
@@ -398,6 +437,117 @@ class ogon_ListReaders_presult {
   return_lr* success;
 
   _ogon_ListReaders_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_ListReaderGroups_args__isset {
+  _ogon_ListReaderGroups_args__isset() : hContext(false), pcchGroups(false) {}
+  bool hContext :1;
+  bool pcchGroups :1;
+} _ogon_ListReaderGroups_args__isset;
+
+class ogon_ListReaderGroups_args {
+ public:
+
+  ogon_ListReaderGroups_args(const ogon_ListReaderGroups_args&);
+  ogon_ListReaderGroups_args& operator=(const ogon_ListReaderGroups_args&);
+  ogon_ListReaderGroups_args() : hContext(0), pcchGroups(0) {
+  }
+
+  virtual ~ogon_ListReaderGroups_args() noexcept;
+  SCARDCONTEXT_RPC hContext;
+  DWORD_RPC pcchGroups;
+
+  _ogon_ListReaderGroups_args__isset __isset;
+
+  void __set_hContext(const SCARDCONTEXT_RPC val);
+
+  void __set_pcchGroups(const DWORD_RPC val);
+
+  bool operator == (const ogon_ListReaderGroups_args & rhs) const
+  {
+    if (!(hContext == rhs.hContext))
+      return false;
+    if (!(pcchGroups == rhs.pcchGroups))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_ListReaderGroups_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_ListReaderGroups_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_ListReaderGroups_pargs {
+ public:
+
+
+  virtual ~ogon_ListReaderGroups_pargs() noexcept;
+  const SCARDCONTEXT_RPC* hContext;
+  const DWORD_RPC* pcchGroups;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_ListReaderGroups_result__isset {
+  _ogon_ListReaderGroups_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_ListReaderGroups_result__isset;
+
+class ogon_ListReaderGroups_result {
+ public:
+
+  ogon_ListReaderGroups_result(const ogon_ListReaderGroups_result&);
+  ogon_ListReaderGroups_result& operator=(const ogon_ListReaderGroups_result&);
+  ogon_ListReaderGroups_result() {
+  }
+
+  virtual ~ogon_ListReaderGroups_result() noexcept;
+  return_lrg success;
+
+  _ogon_ListReaderGroups_result__isset __isset;
+
+  void __set_success(const return_lrg& val);
+
+  bool operator == (const ogon_ListReaderGroups_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_ListReaderGroups_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_ListReaderGroups_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_ListReaderGroups_presult__isset {
+  _ogon_ListReaderGroups_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_ListReaderGroups_presult__isset;
+
+class ogon_ListReaderGroups_presult {
+ public:
+
+
+  virtual ~ogon_ListReaderGroups_presult() noexcept;
+  return_lrg* success;
+
+  _ogon_ListReaderGroups_presult__isset __isset;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
 
@@ -765,8 +915,10 @@ class ogon_Disconnect_presult {
 };
 
 typedef struct _ogon_Status_args__isset {
-  _ogon_Status_args__isset() : hCard(false) {}
+  _ogon_Status_args__isset() : hCard(false), pcchReaderLen(false), pcbAtrLen(false) {}
   bool hCard :1;
+  bool pcchReaderLen :1;
+  bool pcbAtrLen :1;
 } _ogon_Status_args__isset;
 
 class ogon_Status_args {
@@ -774,19 +926,29 @@ class ogon_Status_args {
 
   ogon_Status_args(const ogon_Status_args&);
   ogon_Status_args& operator=(const ogon_Status_args&);
-  ogon_Status_args() : hCard(0) {
+  ogon_Status_args() : hCard(0), pcchReaderLen(0), pcbAtrLen(0) {
   }
 
   virtual ~ogon_Status_args() noexcept;
   SCARDHANDLE_RPC hCard;
+  DWORD_RPC pcchReaderLen;
+  DWORD_RPC pcbAtrLen;
 
   _ogon_Status_args__isset __isset;
 
   void __set_hCard(const SCARDHANDLE_RPC val);
 
+  void __set_pcchReaderLen(const DWORD_RPC val);
+
+  void __set_pcbAtrLen(const DWORD_RPC val);
+
   bool operator == (const ogon_Status_args & rhs) const
   {
     if (!(hCard == rhs.hCard))
+      return false;
+    if (!(pcchReaderLen == rhs.pcchReaderLen))
+      return false;
+    if (!(pcbAtrLen == rhs.pcbAtrLen))
       return false;
     return true;
   }
@@ -808,6 +970,8 @@ class ogon_Status_pargs {
 
   virtual ~ogon_Status_pargs() noexcept;
   const SCARDHANDLE_RPC* hCard;
+  const DWORD_RPC* pcchReaderLen;
+  const DWORD_RPC* pcbAtrLen;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
@@ -1118,6 +1282,672 @@ class ogon_Transmit_presult {
 
 };
 
+typedef struct _ogon_BeginTransaction_args__isset {
+  _ogon_BeginTransaction_args__isset() : hCard(false) {}
+  bool hCard :1;
+} _ogon_BeginTransaction_args__isset;
+
+class ogon_BeginTransaction_args {
+ public:
+
+  ogon_BeginTransaction_args(const ogon_BeginTransaction_args&);
+  ogon_BeginTransaction_args& operator=(const ogon_BeginTransaction_args&);
+  ogon_BeginTransaction_args() : hCard(0) {
+  }
+
+  virtual ~ogon_BeginTransaction_args() noexcept;
+  SCARDHANDLE_RPC hCard;
+
+  _ogon_BeginTransaction_args__isset __isset;
+
+  void __set_hCard(const SCARDHANDLE_RPC val);
+
+  bool operator == (const ogon_BeginTransaction_args & rhs) const
+  {
+    if (!(hCard == rhs.hCard))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_BeginTransaction_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_BeginTransaction_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_BeginTransaction_pargs {
+ public:
+
+
+  virtual ~ogon_BeginTransaction_pargs() noexcept;
+  const SCARDHANDLE_RPC* hCard;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_BeginTransaction_result__isset {
+  _ogon_BeginTransaction_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_BeginTransaction_result__isset;
+
+class ogon_BeginTransaction_result {
+ public:
+
+  ogon_BeginTransaction_result(const ogon_BeginTransaction_result&);
+  ogon_BeginTransaction_result& operator=(const ogon_BeginTransaction_result&);
+  ogon_BeginTransaction_result() : success(0) {
+  }
+
+  virtual ~ogon_BeginTransaction_result() noexcept;
+  LONG_RPC success;
+
+  _ogon_BeginTransaction_result__isset __isset;
+
+  void __set_success(const LONG_RPC val);
+
+  bool operator == (const ogon_BeginTransaction_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_BeginTransaction_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_BeginTransaction_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_BeginTransaction_presult__isset {
+  _ogon_BeginTransaction_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_BeginTransaction_presult__isset;
+
+class ogon_BeginTransaction_presult {
+ public:
+
+
+  virtual ~ogon_BeginTransaction_presult() noexcept;
+  LONG_RPC* success;
+
+  _ogon_BeginTransaction_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_EndTransaction_args__isset {
+  _ogon_EndTransaction_args__isset() : hCard(false), dwDisposition(false) {}
+  bool hCard :1;
+  bool dwDisposition :1;
+} _ogon_EndTransaction_args__isset;
+
+class ogon_EndTransaction_args {
+ public:
+
+  ogon_EndTransaction_args(const ogon_EndTransaction_args&);
+  ogon_EndTransaction_args& operator=(const ogon_EndTransaction_args&);
+  ogon_EndTransaction_args() : hCard(0), dwDisposition(0) {
+  }
+
+  virtual ~ogon_EndTransaction_args() noexcept;
+  SCARDHANDLE_RPC hCard;
+  DWORD_RPC dwDisposition;
+
+  _ogon_EndTransaction_args__isset __isset;
+
+  void __set_hCard(const SCARDHANDLE_RPC val);
+
+  void __set_dwDisposition(const DWORD_RPC val);
+
+  bool operator == (const ogon_EndTransaction_args & rhs) const
+  {
+    if (!(hCard == rhs.hCard))
+      return false;
+    if (!(dwDisposition == rhs.dwDisposition))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_EndTransaction_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_EndTransaction_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_EndTransaction_pargs {
+ public:
+
+
+  virtual ~ogon_EndTransaction_pargs() noexcept;
+  const SCARDHANDLE_RPC* hCard;
+  const DWORD_RPC* dwDisposition;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_EndTransaction_result__isset {
+  _ogon_EndTransaction_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_EndTransaction_result__isset;
+
+class ogon_EndTransaction_result {
+ public:
+
+  ogon_EndTransaction_result(const ogon_EndTransaction_result&);
+  ogon_EndTransaction_result& operator=(const ogon_EndTransaction_result&);
+  ogon_EndTransaction_result() : success(0) {
+  }
+
+  virtual ~ogon_EndTransaction_result() noexcept;
+  LONG_RPC success;
+
+  _ogon_EndTransaction_result__isset __isset;
+
+  void __set_success(const LONG_RPC val);
+
+  bool operator == (const ogon_EndTransaction_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_EndTransaction_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_EndTransaction_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_EndTransaction_presult__isset {
+  _ogon_EndTransaction_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_EndTransaction_presult__isset;
+
+class ogon_EndTransaction_presult {
+ public:
+
+
+  virtual ~ogon_EndTransaction_presult() noexcept;
+  LONG_RPC* success;
+
+  _ogon_EndTransaction_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_GetAttrib_args__isset {
+  _ogon_GetAttrib_args__isset() : hCard(false), dwAttrId(false), pcbAttrLen(false) {}
+  bool hCard :1;
+  bool dwAttrId :1;
+  bool pcbAttrLen :1;
+} _ogon_GetAttrib_args__isset;
+
+class ogon_GetAttrib_args {
+ public:
+
+  ogon_GetAttrib_args(const ogon_GetAttrib_args&);
+  ogon_GetAttrib_args& operator=(const ogon_GetAttrib_args&);
+  ogon_GetAttrib_args() : hCard(0), dwAttrId(0), pcbAttrLen(0) {
+  }
+
+  virtual ~ogon_GetAttrib_args() noexcept;
+  SCARDHANDLE_RPC hCard;
+  DWORD_RPC dwAttrId;
+  DWORD_RPC pcbAttrLen;
+
+  _ogon_GetAttrib_args__isset __isset;
+
+  void __set_hCard(const SCARDHANDLE_RPC val);
+
+  void __set_dwAttrId(const DWORD_RPC val);
+
+  void __set_pcbAttrLen(const DWORD_RPC val);
+
+  bool operator == (const ogon_GetAttrib_args & rhs) const
+  {
+    if (!(hCard == rhs.hCard))
+      return false;
+    if (!(dwAttrId == rhs.dwAttrId))
+      return false;
+    if (!(pcbAttrLen == rhs.pcbAttrLen))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_GetAttrib_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_GetAttrib_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_GetAttrib_pargs {
+ public:
+
+
+  virtual ~ogon_GetAttrib_pargs() noexcept;
+  const SCARDHANDLE_RPC* hCard;
+  const DWORD_RPC* dwAttrId;
+  const DWORD_RPC* pcbAttrLen;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_GetAttrib_result__isset {
+  _ogon_GetAttrib_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_GetAttrib_result__isset;
+
+class ogon_GetAttrib_result {
+ public:
+
+  ogon_GetAttrib_result(const ogon_GetAttrib_result&);
+  ogon_GetAttrib_result& operator=(const ogon_GetAttrib_result&);
+  ogon_GetAttrib_result() {
+  }
+
+  virtual ~ogon_GetAttrib_result() noexcept;
+  return_ga success;
+
+  _ogon_GetAttrib_result__isset __isset;
+
+  void __set_success(const return_ga& val);
+
+  bool operator == (const ogon_GetAttrib_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_GetAttrib_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_GetAttrib_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_GetAttrib_presult__isset {
+  _ogon_GetAttrib_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_GetAttrib_presult__isset;
+
+class ogon_GetAttrib_presult {
+ public:
+
+
+  virtual ~ogon_GetAttrib_presult() noexcept;
+  return_ga* success;
+
+  _ogon_GetAttrib_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_Control_args__isset {
+  _ogon_Control_args__isset() : hCard(false), dwControlCode(false), pbSendBuffer(false), cbRecvLength(false) {}
+  bool hCard :1;
+  bool dwControlCode :1;
+  bool pbSendBuffer :1;
+  bool cbRecvLength :1;
+} _ogon_Control_args__isset;
+
+class ogon_Control_args {
+ public:
+
+  ogon_Control_args(const ogon_Control_args&);
+  ogon_Control_args& operator=(const ogon_Control_args&);
+  ogon_Control_args() : hCard(0), dwControlCode(0), pbSendBuffer(), cbRecvLength(0) {
+  }
+
+  virtual ~ogon_Control_args() noexcept;
+  SCARDHANDLE_RPC hCard;
+  DWORD_RPC dwControlCode;
+  LPVOID_RPC pbSendBuffer;
+  DWORD_RPC cbRecvLength;
+
+  _ogon_Control_args__isset __isset;
+
+  void __set_hCard(const SCARDHANDLE_RPC val);
+
+  void __set_dwControlCode(const DWORD_RPC val);
+
+  void __set_pbSendBuffer(const LPVOID_RPC& val);
+
+  void __set_cbRecvLength(const DWORD_RPC val);
+
+  bool operator == (const ogon_Control_args & rhs) const
+  {
+    if (!(hCard == rhs.hCard))
+      return false;
+    if (!(dwControlCode == rhs.dwControlCode))
+      return false;
+    if (!(pbSendBuffer == rhs.pbSendBuffer))
+      return false;
+    if (!(cbRecvLength == rhs.cbRecvLength))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_Control_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_Control_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_Control_pargs {
+ public:
+
+
+  virtual ~ogon_Control_pargs() noexcept;
+  const SCARDHANDLE_RPC* hCard;
+  const DWORD_RPC* dwControlCode;
+  const LPVOID_RPC* pbSendBuffer;
+  const DWORD_RPC* cbRecvLength;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_Control_result__isset {
+  _ogon_Control_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_Control_result__isset;
+
+class ogon_Control_result {
+ public:
+
+  ogon_Control_result(const ogon_Control_result&);
+  ogon_Control_result& operator=(const ogon_Control_result&);
+  ogon_Control_result() {
+  }
+
+  virtual ~ogon_Control_result() noexcept;
+  return_ctrl success;
+
+  _ogon_Control_result__isset __isset;
+
+  void __set_success(const return_ctrl& val);
+
+  bool operator == (const ogon_Control_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_Control_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_Control_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_Control_presult__isset {
+  _ogon_Control_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_Control_presult__isset;
+
+class ogon_Control_presult {
+ public:
+
+
+  virtual ~ogon_Control_presult() noexcept;
+  return_ctrl* success;
+
+  _ogon_Control_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_Cancel_args__isset {
+  _ogon_Cancel_args__isset() : hContext(false) {}
+  bool hContext :1;
+} _ogon_Cancel_args__isset;
+
+class ogon_Cancel_args {
+ public:
+
+  ogon_Cancel_args(const ogon_Cancel_args&);
+  ogon_Cancel_args& operator=(const ogon_Cancel_args&);
+  ogon_Cancel_args() : hContext(0) {
+  }
+
+  virtual ~ogon_Cancel_args() noexcept;
+  SCARDCONTEXT_RPC hContext;
+
+  _ogon_Cancel_args__isset __isset;
+
+  void __set_hContext(const SCARDCONTEXT_RPC val);
+
+  bool operator == (const ogon_Cancel_args & rhs) const
+  {
+    if (!(hContext == rhs.hContext))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_Cancel_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_Cancel_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_Cancel_pargs {
+ public:
+
+
+  virtual ~ogon_Cancel_pargs() noexcept;
+  const SCARDCONTEXT_RPC* hContext;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_Cancel_result__isset {
+  _ogon_Cancel_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_Cancel_result__isset;
+
+class ogon_Cancel_result {
+ public:
+
+  ogon_Cancel_result(const ogon_Cancel_result&);
+  ogon_Cancel_result& operator=(const ogon_Cancel_result&);
+  ogon_Cancel_result() : success(0) {
+  }
+
+  virtual ~ogon_Cancel_result() noexcept;
+  LONG_RPC success;
+
+  _ogon_Cancel_result__isset __isset;
+
+  void __set_success(const LONG_RPC val);
+
+  bool operator == (const ogon_Cancel_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_Cancel_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_Cancel_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_Cancel_presult__isset {
+  _ogon_Cancel_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_Cancel_presult__isset;
+
+class ogon_Cancel_presult {
+ public:
+
+
+  virtual ~ogon_Cancel_presult() noexcept;
+  LONG_RPC* success;
+
+  _ogon_Cancel_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+typedef struct _ogon_IsValidContext_args__isset {
+  _ogon_IsValidContext_args__isset() : hContext(false) {}
+  bool hContext :1;
+} _ogon_IsValidContext_args__isset;
+
+class ogon_IsValidContext_args {
+ public:
+
+  ogon_IsValidContext_args(const ogon_IsValidContext_args&);
+  ogon_IsValidContext_args& operator=(const ogon_IsValidContext_args&);
+  ogon_IsValidContext_args() : hContext(0) {
+  }
+
+  virtual ~ogon_IsValidContext_args() noexcept;
+  SCARDCONTEXT_RPC hContext;
+
+  _ogon_IsValidContext_args__isset __isset;
+
+  void __set_hContext(const SCARDCONTEXT_RPC val);
+
+  bool operator == (const ogon_IsValidContext_args & rhs) const
+  {
+    if (!(hContext == rhs.hContext))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_IsValidContext_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_IsValidContext_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class ogon_IsValidContext_pargs {
+ public:
+
+
+  virtual ~ogon_IsValidContext_pargs() noexcept;
+  const SCARDCONTEXT_RPC* hContext;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_IsValidContext_result__isset {
+  _ogon_IsValidContext_result__isset() : success(false) {}
+  bool success :1;
+} _ogon_IsValidContext_result__isset;
+
+class ogon_IsValidContext_result {
+ public:
+
+  ogon_IsValidContext_result(const ogon_IsValidContext_result&);
+  ogon_IsValidContext_result& operator=(const ogon_IsValidContext_result&);
+  ogon_IsValidContext_result() : success(0) {
+  }
+
+  virtual ~ogon_IsValidContext_result() noexcept;
+  LONG_RPC success;
+
+  _ogon_IsValidContext_result__isset __isset;
+
+  void __set_success(const LONG_RPC val);
+
+  bool operator == (const ogon_IsValidContext_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const ogon_IsValidContext_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ogon_IsValidContext_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _ogon_IsValidContext_presult__isset {
+  _ogon_IsValidContext_presult__isset() : success(false) {}
+  bool success :1;
+} _ogon_IsValidContext_presult__isset;
+
+class ogon_IsValidContext_presult {
+ public:
+
+
+  virtual ~ogon_IsValidContext_presult() noexcept;
+  LONG_RPC* success;
+
+  _ogon_IsValidContext_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class ogonClient : virtual public ogonIf {
  public:
   ogonClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) {
@@ -1149,9 +1979,12 @@ class ogonClient : virtual public ogonIf {
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext);
   void send_ReleaseContext(const SCARDCONTEXT_RPC hContext);
   LONG_RPC recv_ReleaseContext();
-  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext);
-  void send_ListReaders(const SCARDCONTEXT_RPC hContext);
+  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders);
+  void send_ListReaders(const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders);
   void recv_ListReaders(return_lr& _return);
+  void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups);
+  void send_ListReaderGroups(const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups);
+  void recv_ListReaderGroups(return_lrg& _return);
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols);
   void send_Connect(const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols);
   void recv_Connect(return_c& _return);
@@ -1161,8 +1994,8 @@ class ogonClient : virtual public ogonIf {
   LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
   void send_Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
   LONG_RPC recv_Disconnect();
-  void Status(return_s& _return, const SCARDHANDLE_RPC hCard);
-  void send_Status(const SCARDHANDLE_RPC hCard);
+  void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen);
+  void send_Status(const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen);
   void recv_Status(return_s& _return);
   void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders);
   void send_GetStatusChange(const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders);
@@ -1170,6 +2003,24 @@ class ogonClient : virtual public ogonIf {
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength);
   void send_Transmit(const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength);
   void recv_Transmit(return_t& _return);
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard);
+  void send_BeginTransaction(const SCARDHANDLE_RPC hCard);
+  LONG_RPC recv_BeginTransaction();
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
+  void send_EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
+  LONG_RPC recv_EndTransaction();
+  void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen);
+  void send_GetAttrib(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen);
+  void recv_GetAttrib(return_ga& _return);
+  void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength);
+  void send_Control(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength);
+  void recv_Control(return_ctrl& _return);
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext);
+  void send_Cancel(const SCARDCONTEXT_RPC hContext);
+  LONG_RPC recv_Cancel();
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext);
+  void send_IsValidContext(const SCARDCONTEXT_RPC hContext);
+  LONG_RPC recv_IsValidContext();
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -1188,24 +2039,38 @@ class ogonProcessor : public ::apache::thrift::TDispatchProcessor {
   void process_EstablishContext(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_ReleaseContext(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_ListReaders(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_ListReaderGroups(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_Connect(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_Reconnect(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_Disconnect(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_Status(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_GetStatusChange(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_Transmit(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_BeginTransaction(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_EndTransaction(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_GetAttrib(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_Control(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_Cancel(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_IsValidContext(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   ogonProcessor(::std::shared_ptr<ogonIf> iface) :
     iface_(iface) {
     processMap_["EstablishContext"] = &ogonProcessor::process_EstablishContext;
     processMap_["ReleaseContext"] = &ogonProcessor::process_ReleaseContext;
     processMap_["ListReaders"] = &ogonProcessor::process_ListReaders;
+    processMap_["ListReaderGroups"] = &ogonProcessor::process_ListReaderGroups;
     processMap_["Connect"] = &ogonProcessor::process_Connect;
     processMap_["Reconnect"] = &ogonProcessor::process_Reconnect;
     processMap_["Disconnect"] = &ogonProcessor::process_Disconnect;
     processMap_["Status"] = &ogonProcessor::process_Status;
     processMap_["GetStatusChange"] = &ogonProcessor::process_GetStatusChange;
     processMap_["Transmit"] = &ogonProcessor::process_Transmit;
+    processMap_["BeginTransaction"] = &ogonProcessor::process_BeginTransaction;
+    processMap_["EndTransaction"] = &ogonProcessor::process_EndTransaction;
+    processMap_["GetAttrib"] = &ogonProcessor::process_GetAttrib;
+    processMap_["Control"] = &ogonProcessor::process_Control;
+    processMap_["Cancel"] = &ogonProcessor::process_Cancel;
+    processMap_["IsValidContext"] = &ogonProcessor::process_IsValidContext;
   }
 
   virtual ~ogonProcessor() {}
@@ -1253,13 +2118,23 @@ class ogonMultiface : virtual public ogonIf {
     return ifaces_[i]->ReleaseContext(hContext);
   }
 
-  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext) {
+  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->ListReaders(_return, hContext);
+      ifaces_[i]->ListReaders(_return, hContext, pcchReaders);
     }
-    ifaces_[i]->ListReaders(_return, hContext);
+    ifaces_[i]->ListReaders(_return, hContext, pcchReaders);
+    return;
+  }
+
+  void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->ListReaderGroups(_return, hContext, pcchGroups);
+    }
+    ifaces_[i]->ListReaderGroups(_return, hContext, pcchGroups);
     return;
   }
 
@@ -1292,13 +2167,13 @@ class ogonMultiface : virtual public ogonIf {
     return ifaces_[i]->Disconnect(hCard, dwDisposition);
   }
 
-  void Status(return_s& _return, const SCARDHANDLE_RPC hCard) {
+  void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->Status(_return, hCard);
+      ifaces_[i]->Status(_return, hCard, pcchReaderLen, pcbAtrLen);
     }
-    ifaces_[i]->Status(_return, hCard);
+    ifaces_[i]->Status(_return, hCard, pcchReaderLen, pcbAtrLen);
     return;
   }
 
@@ -1320,6 +2195,62 @@ class ogonMultiface : virtual public ogonIf {
     }
     ifaces_[i]->Transmit(_return, hCard, pioSendPci, pbSendBuffer, pcbRecvLength);
     return;
+  }
+
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->BeginTransaction(hCard);
+    }
+    return ifaces_[i]->BeginTransaction(hCard);
+  }
+
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->EndTransaction(hCard, dwDisposition);
+    }
+    return ifaces_[i]->EndTransaction(hCard, dwDisposition);
+  }
+
+  void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->GetAttrib(_return, hCard, dwAttrId, pcbAttrLen);
+    }
+    ifaces_[i]->GetAttrib(_return, hCard, dwAttrId, pcbAttrLen);
+    return;
+  }
+
+  void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->Control(_return, hCard, dwControlCode, pbSendBuffer, cbRecvLength);
+    }
+    ifaces_[i]->Control(_return, hCard, dwControlCode, pbSendBuffer, cbRecvLength);
+    return;
+  }
+
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->Cancel(hContext);
+    }
+    return ifaces_[i]->Cancel(hContext);
+  }
+
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->IsValidContext(hContext);
+    }
+    return ifaces_[i]->IsValidContext(hContext);
   }
 
 };
@@ -1360,9 +2291,12 @@ class ogonConcurrentClient : virtual public ogonIf {
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext);
   int32_t send_ReleaseContext(const SCARDCONTEXT_RPC hContext);
   LONG_RPC recv_ReleaseContext(const int32_t seqid);
-  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext);
-  int32_t send_ListReaders(const SCARDCONTEXT_RPC hContext);
+  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders);
+  int32_t send_ListReaders(const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders);
   void recv_ListReaders(return_lr& _return, const int32_t seqid);
+  void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups);
+  int32_t send_ListReaderGroups(const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups);
+  void recv_ListReaderGroups(return_lrg& _return, const int32_t seqid);
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols);
   int32_t send_Connect(const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols);
   void recv_Connect(return_c& _return, const int32_t seqid);
@@ -1372,8 +2306,8 @@ class ogonConcurrentClient : virtual public ogonIf {
   LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
   int32_t send_Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
   LONG_RPC recv_Disconnect(const int32_t seqid);
-  void Status(return_s& _return, const SCARDHANDLE_RPC hCard);
-  int32_t send_Status(const SCARDHANDLE_RPC hCard);
+  void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen);
+  int32_t send_Status(const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen);
   void recv_Status(return_s& _return, const int32_t seqid);
   void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders);
   int32_t send_GetStatusChange(const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders);
@@ -1381,6 +2315,24 @@ class ogonConcurrentClient : virtual public ogonIf {
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength);
   int32_t send_Transmit(const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength);
   void recv_Transmit(return_t& _return, const int32_t seqid);
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard);
+  int32_t send_BeginTransaction(const SCARDHANDLE_RPC hCard);
+  LONG_RPC recv_BeginTransaction(const int32_t seqid);
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
+  int32_t send_EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition);
+  LONG_RPC recv_EndTransaction(const int32_t seqid);
+  void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen);
+  int32_t send_GetAttrib(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen);
+  void recv_GetAttrib(return_ga& _return, const int32_t seqid);
+  void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength);
+  int32_t send_Control(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength);
+  void recv_Control(return_ctrl& _return, const int32_t seqid);
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext);
+  int32_t send_Cancel(const SCARDCONTEXT_RPC hContext);
+  LONG_RPC recv_Cancel(const int32_t seqid);
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext);
+  int32_t send_IsValidContext(const SCARDCONTEXT_RPC hContext);
+  LONG_RPC recv_IsValidContext(const int32_t seqid);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

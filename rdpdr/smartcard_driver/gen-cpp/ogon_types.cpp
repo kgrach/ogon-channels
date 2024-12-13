@@ -229,10 +229,6 @@ void return_lr::__set_retValue(const LONG_RPC val) {
 void return_lr::__set_mszReaders(const LPSTR_RPC& val) {
   this->mszReaders = val;
 }
-
-void return_lr::__set_pcchReaders(const DWORD_RPC val) {
-  this->pcchReaders = val;
-}
 std::ostream& operator<<(std::ostream& out, const return_lr& obj)
 {
   obj.printTo(out);
@@ -277,14 +273,6 @@ uint32_t return_lr::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->pcchReaders);
-          this->__isset.pcchReaders = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -310,10 +298,6 @@ uint32_t return_lr::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeString(this->mszReaders);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("pcchReaders", ::apache::thrift::protocol::T_I64, 3);
-  xfer += oprot->writeI64(this->pcchReaders);
-  xfer += oprot->writeFieldEnd();
-
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -323,20 +307,17 @@ void swap(return_lr &a, return_lr &b) {
   using ::std::swap;
   swap(a.retValue, b.retValue);
   swap(a.mszReaders, b.mszReaders);
-  swap(a.pcchReaders, b.pcchReaders);
   swap(a.__isset, b.__isset);
 }
 
 return_lr::return_lr(const return_lr& other4) {
   retValue = other4.retValue;
   mszReaders = other4.mszReaders;
-  pcchReaders = other4.pcchReaders;
   __isset = other4.__isset;
 }
 return_lr& return_lr::operator=(const return_lr& other5) {
   retValue = other5.retValue;
   mszReaders = other5.mszReaders;
-  pcchReaders = other5.pcchReaders;
   __isset = other5.__isset;
   return *this;
 }
@@ -345,7 +326,118 @@ void return_lr::printTo(std::ostream& out) const {
   out << "return_lr(";
   out << "retValue=" << to_string(retValue);
   out << ", " << "mszReaders=" << to_string(mszReaders);
-  out << ", " << "pcchReaders=" << to_string(pcchReaders);
+  out << ")";
+}
+
+
+return_lrg::~return_lrg() noexcept {
+}
+
+
+void return_lrg::__set_retValue(const LONG_RPC val) {
+  this->retValue = val;
+}
+
+void return_lrg::__set_mszGroups(const LPSTR_RPC& val) {
+  this->mszGroups = val;
+}
+std::ostream& operator<<(std::ostream& out, const return_lrg& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t return_lrg::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->retValue);
+          this->__isset.retValue = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->mszGroups);
+          this->__isset.mszGroups = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t return_lrg::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("return_lrg");
+
+  xfer += oprot->writeFieldBegin("retValue", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64(this->retValue);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("mszGroups", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->mszGroups);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(return_lrg &a, return_lrg &b) {
+  using ::std::swap;
+  swap(a.retValue, b.retValue);
+  swap(a.mszGroups, b.mszGroups);
+  swap(a.__isset, b.__isset);
+}
+
+return_lrg::return_lrg(const return_lrg& other6) {
+  retValue = other6.retValue;
+  mszGroups = other6.mszGroups;
+  __isset = other6.__isset;
+}
+return_lrg& return_lrg::operator=(const return_lrg& other7) {
+  retValue = other7.retValue;
+  mszGroups = other7.mszGroups;
+  __isset = other7.__isset;
+  return *this;
+}
+void return_lrg::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "return_lrg(";
+  out << "retValue=" << to_string(retValue);
+  out << ", " << "mszGroups=" << to_string(mszGroups);
   out << ")";
 }
 
@@ -459,17 +551,17 @@ void swap(return_c &a, return_c &b) {
   swap(a.__isset, b.__isset);
 }
 
-return_c::return_c(const return_c& other6) {
-  retValue = other6.retValue;
-  phCard = other6.phCard;
-  pdwActiveProtocol = other6.pdwActiveProtocol;
-  __isset = other6.__isset;
+return_c::return_c(const return_c& other8) {
+  retValue = other8.retValue;
+  phCard = other8.phCard;
+  pdwActiveProtocol = other8.pdwActiveProtocol;
+  __isset = other8.__isset;
 }
-return_c& return_c::operator=(const return_c& other7) {
-  retValue = other7.retValue;
-  phCard = other7.phCard;
-  pdwActiveProtocol = other7.pdwActiveProtocol;
-  __isset = other7.__isset;
+return_c& return_c::operator=(const return_c& other9) {
+  retValue = other9.retValue;
+  phCard = other9.phCard;
+  pdwActiveProtocol = other9.pdwActiveProtocol;
+  __isset = other9.__isset;
   return *this;
 }
 void return_c::printTo(std::ostream& out) const {
@@ -492,10 +584,6 @@ void return_s::__set_retValue(const LONG_RPC val) {
 
 void return_s::__set_szReaderName(const LPSTR_RPC& val) {
   this->szReaderName = val;
-}
-
-void return_s::__set_pcchReaderLen(const DWORD_RPC val) {
-  this->pcchReaderLen = val;
 }
 
 void return_s::__set_pdwState(const DWORD_RPC val) {
@@ -553,14 +641,6 @@ uint32_t return_s::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->pcchReaderLen);
-          this->__isset.pcchReaderLen = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
       case 4:
         if (ftype == ::apache::thrift::protocol::T_I64) {
           xfer += iprot->readI64(this->pdwState);
@@ -610,10 +690,6 @@ uint32_t return_s::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeString(this->szReaderName);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("pcchReaderLen", ::apache::thrift::protocol::T_I64, 3);
-  xfer += oprot->writeI64(this->pcchReaderLen);
-  xfer += oprot->writeFieldEnd();
-
   xfer += oprot->writeFieldBegin("pdwState", ::apache::thrift::protocol::T_I64, 4);
   xfer += oprot->writeI64(this->pdwState);
   xfer += oprot->writeFieldEnd();
@@ -635,30 +711,27 @@ void swap(return_s &a, return_s &b) {
   using ::std::swap;
   swap(a.retValue, b.retValue);
   swap(a.szReaderName, b.szReaderName);
-  swap(a.pcchReaderLen, b.pcchReaderLen);
   swap(a.pdwState, b.pdwState);
   swap(a.pdwProtocol, b.pdwProtocol);
   swap(a.pbAtr, b.pbAtr);
   swap(a.__isset, b.__isset);
 }
 
-return_s::return_s(const return_s& other8) {
-  retValue = other8.retValue;
-  szReaderName = other8.szReaderName;
-  pcchReaderLen = other8.pcchReaderLen;
-  pdwState = other8.pdwState;
-  pdwProtocol = other8.pdwProtocol;
-  pbAtr = other8.pbAtr;
-  __isset = other8.__isset;
+return_s::return_s(const return_s& other10) {
+  retValue = other10.retValue;
+  szReaderName = other10.szReaderName;
+  pdwState = other10.pdwState;
+  pdwProtocol = other10.pdwProtocol;
+  pbAtr = other10.pbAtr;
+  __isset = other10.__isset;
 }
-return_s& return_s::operator=(const return_s& other9) {
-  retValue = other9.retValue;
-  szReaderName = other9.szReaderName;
-  pcchReaderLen = other9.pcchReaderLen;
-  pdwState = other9.pdwState;
-  pdwProtocol = other9.pdwProtocol;
-  pbAtr = other9.pbAtr;
-  __isset = other9.__isset;
+return_s& return_s::operator=(const return_s& other11) {
+  retValue = other11.retValue;
+  szReaderName = other11.szReaderName;
+  pdwState = other11.pdwState;
+  pdwProtocol = other11.pdwProtocol;
+  pbAtr = other11.pbAtr;
+  __isset = other11.__isset;
   return *this;
 }
 void return_s::printTo(std::ostream& out) const {
@@ -666,7 +739,6 @@ void return_s::printTo(std::ostream& out) const {
   out << "return_s(";
   out << "retValue=" << to_string(retValue);
   out << ", " << "szReaderName=" << to_string(szReaderName);
-  out << ", " << "pcchReaderLen=" << to_string(pcchReaderLen);
   out << ", " << "pdwState=" << to_string(pdwState);
   out << ", " << "pdwProtocol=" << to_string(pdwProtocol);
   out << ", " << "pbAtr=" << to_string(pbAtr);
@@ -766,15 +838,15 @@ void swap(scard_io_request_rpc &a, scard_io_request_rpc &b) {
   swap(a.__isset, b.__isset);
 }
 
-scard_io_request_rpc::scard_io_request_rpc(const scard_io_request_rpc& other10) {
-  dwProtocol = other10.dwProtocol;
-  cbPciLength = other10.cbPciLength;
-  __isset = other10.__isset;
+scard_io_request_rpc::scard_io_request_rpc(const scard_io_request_rpc& other12) {
+  dwProtocol = other12.dwProtocol;
+  cbPciLength = other12.cbPciLength;
+  __isset = other12.__isset;
 }
-scard_io_request_rpc& scard_io_request_rpc::operator=(const scard_io_request_rpc& other11) {
-  dwProtocol = other11.dwProtocol;
-  cbPciLength = other11.cbPciLength;
-  __isset = other11.__isset;
+scard_io_request_rpc& scard_io_request_rpc::operator=(const scard_io_request_rpc& other13) {
+  dwProtocol = other13.dwProtocol;
+  cbPciLength = other13.cbPciLength;
+  __isset = other13.__isset;
   return *this;
 }
 void scard_io_request_rpc::printTo(std::ostream& out) const {
@@ -895,17 +967,17 @@ void swap(return_t &a, return_t &b) {
   swap(a.__isset, b.__isset);
 }
 
-return_t::return_t(const return_t& other12) {
-  retValue = other12.retValue;
-  pioRecvPci = other12.pioRecvPci;
-  pbRecvBuffer = other12.pbRecvBuffer;
-  __isset = other12.__isset;
+return_t::return_t(const return_t& other14) {
+  retValue = other14.retValue;
+  pioRecvPci = other14.pioRecvPci;
+  pbRecvBuffer = other14.pbRecvBuffer;
+  __isset = other14.__isset;
 }
-return_t& return_t::operator=(const return_t& other13) {
-  retValue = other13.retValue;
-  pioRecvPci = other13.pioRecvPci;
-  pbRecvBuffer = other13.pbRecvBuffer;
-  __isset = other13.__isset;
+return_t& return_t::operator=(const return_t& other15) {
+  retValue = other15.retValue;
+  pioRecvPci = other15.pioRecvPci;
+  pbRecvBuffer = other15.pbRecvBuffer;
+  __isset = other15.__isset;
   return *this;
 }
 void return_t::printTo(std::ostream& out) const {
@@ -1010,15 +1082,15 @@ void swap(return_r &a, return_r &b) {
   swap(a.__isset, b.__isset);
 }
 
-return_r::return_r(const return_r& other14) {
-  retValue = other14.retValue;
-  pdwActiveProtocol = other14.pdwActiveProtocol;
-  __isset = other14.__isset;
+return_r::return_r(const return_r& other16) {
+  retValue = other16.retValue;
+  pdwActiveProtocol = other16.pdwActiveProtocol;
+  __isset = other16.__isset;
 }
-return_r& return_r::operator=(const return_r& other15) {
-  retValue = other15.retValue;
-  pdwActiveProtocol = other15.pdwActiveProtocol;
-  __isset = other15.__isset;
+return_r& return_r::operator=(const return_r& other17) {
+  retValue = other17.retValue;
+  pdwActiveProtocol = other17.pdwActiveProtocol;
+  __isset = other17.__isset;
   return *this;
 }
 void return_r::printTo(std::ostream& out) const {
@@ -1156,19 +1228,19 @@ void swap(scard_readerstate_rpc &a, scard_readerstate_rpc &b) {
   swap(a.__isset, b.__isset);
 }
 
-scard_readerstate_rpc::scard_readerstate_rpc(const scard_readerstate_rpc& other16) {
-  szReader = other16.szReader;
-  dwCurrentState = other16.dwCurrentState;
-  dwEventState = other16.dwEventState;
-  rgbAtr = other16.rgbAtr;
-  __isset = other16.__isset;
+scard_readerstate_rpc::scard_readerstate_rpc(const scard_readerstate_rpc& other18) {
+  szReader = other18.szReader;
+  dwCurrentState = other18.dwCurrentState;
+  dwEventState = other18.dwEventState;
+  rgbAtr = other18.rgbAtr;
+  __isset = other18.__isset;
 }
-scard_readerstate_rpc& scard_readerstate_rpc::operator=(const scard_readerstate_rpc& other17) {
-  szReader = other17.szReader;
-  dwCurrentState = other17.dwCurrentState;
-  dwEventState = other17.dwEventState;
-  rgbAtr = other17.rgbAtr;
-  __isset = other17.__isset;
+scard_readerstate_rpc& scard_readerstate_rpc::operator=(const scard_readerstate_rpc& other19) {
+  szReader = other19.szReader;
+  dwCurrentState = other19.dwCurrentState;
+  dwEventState = other19.dwEventState;
+  rgbAtr = other19.rgbAtr;
+  __isset = other19.__isset;
   return *this;
 }
 void scard_readerstate_rpc::printTo(std::ostream& out) const {
@@ -1233,14 +1305,14 @@ uint32_t return_gsc::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->rgReaderStates.clear();
-            uint32_t _size18;
-            ::apache::thrift::protocol::TType _etype21;
-            xfer += iprot->readListBegin(_etype21, _size18);
-            this->rgReaderStates.resize(_size18);
-            uint32_t _i22;
-            for (_i22 = 0; _i22 < _size18; ++_i22)
+            uint32_t _size20;
+            ::apache::thrift::protocol::TType _etype23;
+            xfer += iprot->readListBegin(_etype23, _size20);
+            this->rgReaderStates.resize(_size20);
+            uint32_t _i24;
+            for (_i24 = 0; _i24 < _size20; ++_i24)
             {
-              xfer += this->rgReaderStates[_i22].read(iprot);
+              xfer += this->rgReaderStates[_i24].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -1273,10 +1345,10 @@ uint32_t return_gsc::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldBegin("rgReaderStates", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->rgReaderStates.size()));
-    std::vector<scard_readerstate_rpc> ::const_iterator _iter23;
-    for (_iter23 = this->rgReaderStates.begin(); _iter23 != this->rgReaderStates.end(); ++_iter23)
+    std::vector<scard_readerstate_rpc> ::const_iterator _iter25;
+    for (_iter25 = this->rgReaderStates.begin(); _iter25 != this->rgReaderStates.end(); ++_iter25)
     {
-      xfer += (*_iter23).write(oprot);
+      xfer += (*_iter25).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -1294,15 +1366,15 @@ void swap(return_gsc &a, return_gsc &b) {
   swap(a.__isset, b.__isset);
 }
 
-return_gsc::return_gsc(const return_gsc& other24) {
-  retValue = other24.retValue;
-  rgReaderStates = other24.rgReaderStates;
-  __isset = other24.__isset;
+return_gsc::return_gsc(const return_gsc& other26) {
+  retValue = other26.retValue;
+  rgReaderStates = other26.rgReaderStates;
+  __isset = other26.__isset;
 }
-return_gsc& return_gsc::operator=(const return_gsc& other25) {
-  retValue = other25.retValue;
-  rgReaderStates = other25.rgReaderStates;
-  __isset = other25.__isset;
+return_gsc& return_gsc::operator=(const return_gsc& other27) {
+  retValue = other27.retValue;
+  rgReaderStates = other27.rgReaderStates;
+  __isset = other27.__isset;
   return *this;
 }
 void return_gsc::printTo(std::ostream& out) const {
@@ -1310,6 +1382,230 @@ void return_gsc::printTo(std::ostream& out) const {
   out << "return_gsc(";
   out << "retValue=" << to_string(retValue);
   out << ", " << "rgReaderStates=" << to_string(rgReaderStates);
+  out << ")";
+}
+
+
+return_ga::~return_ga() noexcept {
+}
+
+
+void return_ga::__set_retValue(const LONG_RPC val) {
+  this->retValue = val;
+}
+
+void return_ga::__set_pbAttr(const LPBYTE_RPC& val) {
+  this->pbAttr = val;
+}
+std::ostream& operator<<(std::ostream& out, const return_ga& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t return_ga::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->retValue);
+          this->__isset.retValue = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readBinary(this->pbAttr);
+          this->__isset.pbAttr = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t return_ga::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("return_ga");
+
+  xfer += oprot->writeFieldBegin("retValue", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64(this->retValue);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("pbAttr", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeBinary(this->pbAttr);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(return_ga &a, return_ga &b) {
+  using ::std::swap;
+  swap(a.retValue, b.retValue);
+  swap(a.pbAttr, b.pbAttr);
+  swap(a.__isset, b.__isset);
+}
+
+return_ga::return_ga(const return_ga& other28) {
+  retValue = other28.retValue;
+  pbAttr = other28.pbAttr;
+  __isset = other28.__isset;
+}
+return_ga& return_ga::operator=(const return_ga& other29) {
+  retValue = other29.retValue;
+  pbAttr = other29.pbAttr;
+  __isset = other29.__isset;
+  return *this;
+}
+void return_ga::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "return_ga(";
+  out << "retValue=" << to_string(retValue);
+  out << ", " << "pbAttr=" << to_string(pbAttr);
+  out << ")";
+}
+
+
+return_ctrl::~return_ctrl() noexcept {
+}
+
+
+void return_ctrl::__set_retValue(const LONG_RPC val) {
+  this->retValue = val;
+}
+
+void return_ctrl::__set_pbRecvBuffer(const LPVOID_RPC& val) {
+  this->pbRecvBuffer = val;
+}
+std::ostream& operator<<(std::ostream& out, const return_ctrl& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t return_ctrl::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->retValue);
+          this->__isset.retValue = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readBinary(this->pbRecvBuffer);
+          this->__isset.pbRecvBuffer = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t return_ctrl::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("return_ctrl");
+
+  xfer += oprot->writeFieldBegin("retValue", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64(this->retValue);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("pbRecvBuffer", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeBinary(this->pbRecvBuffer);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(return_ctrl &a, return_ctrl &b) {
+  using ::std::swap;
+  swap(a.retValue, b.retValue);
+  swap(a.pbRecvBuffer, b.pbRecvBuffer);
+  swap(a.__isset, b.__isset);
+}
+
+return_ctrl::return_ctrl(const return_ctrl& other30) {
+  retValue = other30.retValue;
+  pbRecvBuffer = other30.pbRecvBuffer;
+  __isset = other30.__isset;
+}
+return_ctrl& return_ctrl::operator=(const return_ctrl& other31) {
+  retValue = other31.retValue;
+  pbRecvBuffer = other31.pbRecvBuffer;
+  __isset = other31.__isset;
+  return *this;
+}
+void return_ctrl::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "return_ctrl(";
+  out << "retValue=" << to_string(retValue);
+  out << ", " << "pbRecvBuffer=" << to_string(pbRecvBuffer);
   out << ")";
 }
 

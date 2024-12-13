@@ -37,11 +37,15 @@ typedef int64_t SCARDHANDLE_RPC;
 
 typedef std::string LPBYTE_RPC;
 
+typedef std::string LPVOID_RPC;
+
 class return_ec;
 
 class return_rc;
 
 class return_lr;
+
+class return_lrg;
 
 class return_c;
 
@@ -56,6 +60,10 @@ class return_r;
 class scard_readerstate_rpc;
 
 class return_gsc;
+
+class return_ga;
+
+class return_ctrl;
 
 typedef struct _return_ec__isset {
   _return_ec__isset() : retValue(false), cardContext(false) {}
@@ -148,10 +156,9 @@ void swap(return_rc &a, return_rc &b);
 std::ostream& operator<<(std::ostream& out, const return_rc& obj);
 
 typedef struct _return_lr__isset {
-  _return_lr__isset() : retValue(false), mszReaders(false), pcchReaders(false) {}
+  _return_lr__isset() : retValue(false), mszReaders(false) {}
   bool retValue :1;
   bool mszReaders :1;
-  bool pcchReaders :1;
 } _return_lr__isset;
 
 class return_lr : public virtual ::apache::thrift::TBase {
@@ -159,13 +166,12 @@ class return_lr : public virtual ::apache::thrift::TBase {
 
   return_lr(const return_lr&);
   return_lr& operator=(const return_lr&);
-  return_lr() : retValue(0), mszReaders(), pcchReaders(0) {
+  return_lr() : retValue(0), mszReaders() {
   }
 
   virtual ~return_lr() noexcept;
   LONG_RPC retValue;
   LPSTR_RPC mszReaders;
-  DWORD_RPC pcchReaders;
 
   _return_lr__isset __isset;
 
@@ -173,15 +179,11 @@ class return_lr : public virtual ::apache::thrift::TBase {
 
   void __set_mszReaders(const LPSTR_RPC& val);
 
-  void __set_pcchReaders(const DWORD_RPC val);
-
   bool operator == (const return_lr & rhs) const
   {
     if (!(retValue == rhs.retValue))
       return false;
     if (!(mszReaders == rhs.mszReaders))
-      return false;
-    if (!(pcchReaders == rhs.pcchReaders))
       return false;
     return true;
   }
@@ -200,6 +202,54 @@ class return_lr : public virtual ::apache::thrift::TBase {
 void swap(return_lr &a, return_lr &b);
 
 std::ostream& operator<<(std::ostream& out, const return_lr& obj);
+
+typedef struct _return_lrg__isset {
+  _return_lrg__isset() : retValue(false), mszGroups(false) {}
+  bool retValue :1;
+  bool mszGroups :1;
+} _return_lrg__isset;
+
+class return_lrg : public virtual ::apache::thrift::TBase {
+ public:
+
+  return_lrg(const return_lrg&);
+  return_lrg& operator=(const return_lrg&);
+  return_lrg() : retValue(0), mszGroups() {
+  }
+
+  virtual ~return_lrg() noexcept;
+  LONG_RPC retValue;
+  LPSTR_RPC mszGroups;
+
+  _return_lrg__isset __isset;
+
+  void __set_retValue(const LONG_RPC val);
+
+  void __set_mszGroups(const LPSTR_RPC& val);
+
+  bool operator == (const return_lrg & rhs) const
+  {
+    if (!(retValue == rhs.retValue))
+      return false;
+    if (!(mszGroups == rhs.mszGroups))
+      return false;
+    return true;
+  }
+  bool operator != (const return_lrg &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const return_lrg & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(return_lrg &a, return_lrg &b);
+
+std::ostream& operator<<(std::ostream& out, const return_lrg& obj);
 
 typedef struct _return_c__isset {
   _return_c__isset() : retValue(false), phCard(false), pdwActiveProtocol(false) {}
@@ -256,10 +306,9 @@ void swap(return_c &a, return_c &b);
 std::ostream& operator<<(std::ostream& out, const return_c& obj);
 
 typedef struct _return_s__isset {
-  _return_s__isset() : retValue(false), szReaderName(false), pcchReaderLen(false), pdwState(false), pdwProtocol(false), pbAtr(false) {}
+  _return_s__isset() : retValue(false), szReaderName(false), pdwState(false), pdwProtocol(false), pbAtr(false) {}
   bool retValue :1;
   bool szReaderName :1;
-  bool pcchReaderLen :1;
   bool pdwState :1;
   bool pdwProtocol :1;
   bool pbAtr :1;
@@ -270,13 +319,12 @@ class return_s : public virtual ::apache::thrift::TBase {
 
   return_s(const return_s&);
   return_s& operator=(const return_s&);
-  return_s() : retValue(0), szReaderName(), pcchReaderLen(0), pdwState(0), pdwProtocol(0), pbAtr() {
+  return_s() : retValue(0), szReaderName(), pdwState(0), pdwProtocol(0), pbAtr() {
   }
 
   virtual ~return_s() noexcept;
   LONG_RPC retValue;
   LPSTR_RPC szReaderName;
-  DWORD_RPC pcchReaderLen;
   DWORD_RPC pdwState;
   DWORD_RPC pdwProtocol;
   LPBYTE_RPC pbAtr;
@@ -286,8 +334,6 @@ class return_s : public virtual ::apache::thrift::TBase {
   void __set_retValue(const LONG_RPC val);
 
   void __set_szReaderName(const LPSTR_RPC& val);
-
-  void __set_pcchReaderLen(const DWORD_RPC val);
 
   void __set_pdwState(const DWORD_RPC val);
 
@@ -300,8 +346,6 @@ class return_s : public virtual ::apache::thrift::TBase {
     if (!(retValue == rhs.retValue))
       return false;
     if (!(szReaderName == rhs.szReaderName))
-      return false;
-    if (!(pcchReaderLen == rhs.pcchReaderLen))
       return false;
     if (!(pdwState == rhs.pdwState))
       return false;
@@ -584,6 +628,102 @@ class return_gsc : public virtual ::apache::thrift::TBase {
 void swap(return_gsc &a, return_gsc &b);
 
 std::ostream& operator<<(std::ostream& out, const return_gsc& obj);
+
+typedef struct _return_ga__isset {
+  _return_ga__isset() : retValue(false), pbAttr(false) {}
+  bool retValue :1;
+  bool pbAttr :1;
+} _return_ga__isset;
+
+class return_ga : public virtual ::apache::thrift::TBase {
+ public:
+
+  return_ga(const return_ga&);
+  return_ga& operator=(const return_ga&);
+  return_ga() : retValue(0), pbAttr() {
+  }
+
+  virtual ~return_ga() noexcept;
+  LONG_RPC retValue;
+  LPBYTE_RPC pbAttr;
+
+  _return_ga__isset __isset;
+
+  void __set_retValue(const LONG_RPC val);
+
+  void __set_pbAttr(const LPBYTE_RPC& val);
+
+  bool operator == (const return_ga & rhs) const
+  {
+    if (!(retValue == rhs.retValue))
+      return false;
+    if (!(pbAttr == rhs.pbAttr))
+      return false;
+    return true;
+  }
+  bool operator != (const return_ga &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const return_ga & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(return_ga &a, return_ga &b);
+
+std::ostream& operator<<(std::ostream& out, const return_ga& obj);
+
+typedef struct _return_ctrl__isset {
+  _return_ctrl__isset() : retValue(false), pbRecvBuffer(false) {}
+  bool retValue :1;
+  bool pbRecvBuffer :1;
+} _return_ctrl__isset;
+
+class return_ctrl : public virtual ::apache::thrift::TBase {
+ public:
+
+  return_ctrl(const return_ctrl&);
+  return_ctrl& operator=(const return_ctrl&);
+  return_ctrl() : retValue(0), pbRecvBuffer() {
+  }
+
+  virtual ~return_ctrl() noexcept;
+  LONG_RPC retValue;
+  LPVOID_RPC pbRecvBuffer;
+
+  _return_ctrl__isset __isset;
+
+  void __set_retValue(const LONG_RPC val);
+
+  void __set_pbRecvBuffer(const LPVOID_RPC& val);
+
+  bool operator == (const return_ctrl & rhs) const
+  {
+    if (!(retValue == rhs.retValue))
+      return false;
+    if (!(pbRecvBuffer == rhs.pbRecvBuffer))
+      return false;
+    return true;
+  }
+  bool operator != (const return_ctrl &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const return_ctrl & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(return_ctrl &a, return_ctrl &b);
+
+std::ostream& operator<<(std::ostream& out, const return_ctrl& obj);
 
 
 

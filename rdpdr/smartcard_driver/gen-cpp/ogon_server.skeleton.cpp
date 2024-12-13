@@ -28,9 +28,14 @@ class ogonHandler : virtual public ogonIf {
     printf("ReleaseContext\n");
   }
 
-  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext) {
+  void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
     // Your implementation goes here
     printf("ListReaders\n");
+  }
+
+  void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
+    // Your implementation goes here
+    printf("ListReaderGroups\n");
   }
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
@@ -48,7 +53,7 @@ class ogonHandler : virtual public ogonIf {
     printf("Disconnect\n");
   }
 
-  void Status(return_s& _return, const SCARDHANDLE_RPC hCard) {
+  void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {
     // Your implementation goes here
     printf("Status\n");
   }
@@ -61,6 +66,36 @@ class ogonHandler : virtual public ogonIf {
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) {
     // Your implementation goes here
     printf("Transmit\n");
+  }
+
+  LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {
+    // Your implementation goes here
+    printf("BeginTransaction\n");
+  }
+
+  LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
+    // Your implementation goes here
+    printf("EndTransaction\n");
+  }
+
+  void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) {
+    // Your implementation goes here
+    printf("GetAttrib\n");
+  }
+
+  void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) {
+    // Your implementation goes here
+    printf("Control\n");
+  }
+
+  LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
+    printf("Cancel\n");
+  }
+
+  LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
+    printf("IsValidContext\n");
   }
 
 };
