@@ -29,18 +29,6 @@ public:
   }
 
   void EstablishContext(return_ec& _return, const DWORD_RPC dwScope) {
-
-    // SCARDCONTEXT hContext;
-
-    // printf ("Server received SCardEstablishContext dwScope: %ld\n", dwScope);
-
-    // LONG rv = SCardEstablishContext(dwScope, NULL, NULL, &hContext);
-
-    // printf ("SCardEstablishContext return %ld, Server send hContext: %ld\n", rv, hContext);
-
-    // _return.cardContext = hContext;
-    // _return.retValue = rv;
-
     std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
     globalSmartCardOperationsThread->createHandle(establishContextCall);
 
@@ -65,7 +53,6 @@ public:
 }
 
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) {
-    // Your implementation goes here
     printf("ReleaseContext\n");
 
     printf ("Server received SCardReleaseContext dwScope: %ld\n", hContext);
@@ -78,7 +65,6 @@ public:
   }
 
   void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
-    // Your implementation goes here
 
     LPSTR szReaderName = NULL;
     DWORD szReaderNameLen = pcchReaders;
@@ -92,16 +78,19 @@ public:
       szReaderName = readerBuf.data();
     }
 
-    LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
+    // LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
 
-    printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, szReaderName);
+    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext);
+    globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
-    _return.retValue = rv;
-    _return.mszReaders = szReaderName;
+//    printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, szReaderName);
 
-    if(SCARD_AUTOALLOCATE == pcchReaders) {
-      SCardFreeMemory(hContext, szReaderName);
-    }
+    _return.retValue = listReaders_Call->getReturnCBytes();
+    _return.mszReaders = listReaders_Call->getReturnReply().data();
+
+    // if(SCARD_AUTOALLOCATE == pcchReaders) {
+    //   SCardFreeMemory(hContext, szReaderName);
+    // }
   }
 
   void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {

@@ -410,10 +410,18 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, quint32 ioControlCode) {
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
-	_hContext._cbContext = 8;
-	_cBytes = 36; // Захардкодил
-	tmpMszGroups.append(QByteArray::fromHex("04000200")); // Захардкодил - тоже пока не понятно, что это за значение
-	_mszGroups.append(QByteArray::fromHex("2400000053004300610072006400240041006c006c0052006500610064006500720073000000000000000000")); // Захардкодил текст 'SCard$AllReaders'
+
+	if(_ioControlCode == SCARD_IOCTL_LISTREADERSW){
+		_hContext._cbContext = 8;
+		_cBytes = 36; // Захардкодил
+		tmpMszGroups.append(QByteArray::fromHex("04000200")); // Захардкодил - тоже пока не понятно, что это за значение
+		_mszGroups.append(QByteArray::fromHex("2400000053004300610072006400240041006c006c0052006500610064006500720073000000000000000000")); // Захардкодил текст 'SCard$AllReaders'
+	}
+	else {
+		CWLOG_DBG(TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		CWLOG_DBG(TAG, "!!!!!!! NEED REALISE SCARD_IOCTL_LISTREADERSA !!!!!!!");
+		CWLOG_DBG(TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	}
 	_fmszReadersIsNULL = 0;
 	_ccReaders = SCARD_AUTOALLOCATE;	
 

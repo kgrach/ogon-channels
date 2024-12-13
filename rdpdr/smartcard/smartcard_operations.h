@@ -159,7 +159,7 @@ public:
 	virtual ~ListReaders_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return 0; }
+	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._msz;}
 	quint32 getReturnCBytes() const {return _response._cBytes;}
 //	const QByteArray& getReturnReverseContext() const override {}
