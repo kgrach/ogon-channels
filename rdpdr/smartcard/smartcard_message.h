@@ -9,17 +9,15 @@
 
 #include <vector>
 
-class REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
-{
-public:	
+struct REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
+{	
 	quint32 _cbContext; 			// The number of bytes in the _pbContext
 	QByteArray _pbContext; 			// littleEndian
 //	QByteArray _pbContextReverse; 	// bigEndian
 };
 
-class REDIR_SCARDHANDLE
+struct REDIR_SCARDHANDLE
 {
-public:	
 	quint32 _cbHandle;
 	QByteArray _pbHandle;
 };
@@ -29,9 +27,8 @@ public:
 // 	qint32 _longValue;
 // };
 
-class Long_Return
+struct Long_Return
 {
-public:
 	qint32 _returnCode;
 };
 
@@ -42,16 +39,35 @@ struct longAndMultiString_Return
 	QByteArray _msz;
 };
 
-class EstablishContext_Return
-{
-public:	
+struct EstablishContext_Return
+{	
 	qint32 		_returnCode;
 	REDIR_SCARDCONTEXT _hContext;
-//	QByteArray 	_hContext;
-
-// public:
-// 	void setReturnCode(qint32 ret);
-// 	void setContext(const QByteArray& context);
 }; 
 
 typedef longAndMultiString_Return ListReaders_Return;
+
+struct ReaderState // ReaderStateA и ReaderStateW. В зависимости от ioControlCode в _szReader хранится ASCII или Unicode
+{
+	QByteArray 	_szReader;
+//	LPVOID 		_pvUserData;
+	quint32 	_dwCurrentState;
+	quint32 	_dwEventState;
+	quint32 	_cbAtr;
+	QByteArray 	_rgbAtr; //[36];
+}; 
+
+struct ReaderState_Return
+{
+	quint32 _dwCurrentState;
+	quint32 _dwEventState;
+	/* [range] */ quint32 _cbAtr;
+	QByteArray _rgbAtr; // [36]
+};
+
+struct GetStatusChange_Return
+{
+	qint32 		_returnCode;
+	quint32 	_cReaders{0};
+	std::shared_ptr<ReaderState_Return> _rgReaderStates;
+}; 

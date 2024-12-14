@@ -83,7 +83,7 @@ class smartcardIOControl_Call {
 protected:
 	quint32 	_ioControlCode{0};
 	QByteArray 	_inputBuffer;
-	quint32 	_outputBufferLength{0};
+	quint32 	_outputBufferLength{2048}; 	// [MS-RDPESC] 3.2.5.1
 
 
 
@@ -150,7 +150,7 @@ class ListReaders_Call :  public smartcardIOControl_Call {
 	quint32 			_cBytes{0};
 	QByteArray 			_mszGroups;
 	quint32 			_fmszReadersIsNULL{0};
-	quint32				_ccReaders;
+	quint32				_ccReaders{0};
 
 	ListReaders_Return	_response;
 
@@ -162,6 +162,25 @@ public:
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._msz;}
 	quint32 getReturnCBytes() const {return _response._cBytes;}
-//	const QByteArray& getReturnReverseContext() const override {}
 };
+
+
+class GetStatusChange_Call :  public smartcardIOControl_Call {
+	REDIR_SCARDCONTEXT 	_hContext;
+	quint32 			_dwTimeOut{0xFFFFFFFF};
+	quint32 			_cReaders{0};
+	std::shared_ptr<ReaderState> _rgReaderStates;
+
+	GetStatusChange_Return	_response;
+
+public:
+	GetStatusChange_Call(quint64 hContext, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEW);
+	virtual ~GetStatusChange_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	// qint64 getReturnCode() const override {return _response._returnCode; }
+	// const QByteArray& getReturnReply() const override {return _response._msz;}
+	// quint32 getReturnCBytes() const {return _response._cBytes;}
+};
+
 
