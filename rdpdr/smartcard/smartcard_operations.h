@@ -6,7 +6,8 @@
 #include <qbytearray.h>
 #include <ogon-channels/qt/rdpstreambuffer.h>
 
-
+#include "../smartcard_driver/gen-cpp/ogon.h"
+#include "../smartcard_driver/gen-cpp/ogon_types.h"
 #include "smartcard_message.h"
 
 #define RDPDR_DEVICE_IO_REQUEST_LENGTH		24
@@ -169,18 +170,18 @@ class GetStatusChange_Call :  public smartcardIOControl_Call {
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_dwTimeOut{0xFFFFFFFF};
 	quint32 			_cReaders{0};
-	std::shared_ptr<ReaderState> _rgReaderStates;
+	std::vector<ReaderState> _rgReaderStates;
 
 	GetStatusChange_Return	_response;
 
 public:
-	GetStatusChange_Call(quint64 hContext, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEW);
+	GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEW);
 	virtual ~GetStatusChange_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	// qint64 getReturnCode() const override {return _response._returnCode; }
-	// const QByteArray& getReturnReply() const override {return _response._msz;}
-	// quint32 getReturnCBytes() const {return _response._cBytes;}
+	qint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._rgReaderStates->_rgbAtr;}
+
 };
 
 

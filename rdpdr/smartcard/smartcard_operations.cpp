@@ -487,52 +487,78 @@ void ListReaders_Call::setResponse(QByteArray& buf){
 }
 
 //==================================== GetStatusChange_Call =============================================
-GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEW){
+GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, quint32 cReaders, quint32 ioControlCode){
 	quint32 objectBufferLength = 0;
 	QByteArray padding;
-	quint64 offset = 562949953421320; // в дампе памяти между returnCode размерностью контекста (_response._hContext._cbContext) какие-то 8 байт. 
+	quint64 offset = 562949953421320; // в дампе памяти между returnCode и размерностью контекста (_response._hContext._cbContext) какие-то 8 байт. 
 						// Пока не понял, что это за данные. В док-ции написано cbContext от 0 до 16 байт. См. MS-RDPESC 2.2.1.1.
 						// 562949953421320 = 0x08 00 00 00 00 00 02 00 - в обратном порядке
 						// В freeRDP это значение заполняется в функции ......
-	QByteArray tmpMszGroups; // 
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
-	_dwTimeOut = 0xFFFFFFFF;
+	_dwTimeOut = dwTimeout;
 	_cReaders = cReaders;
+	_rgReaderStates.reserve(cReaders);
+	_hContext._cbContext = 8;
+	QByteArray tmpBufferForSend; 
 
-	if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){
-		_hContext._cbContext = 8;
+	for(int i = 0; i < cReaders; i++){
+		auto tmpStr = rgReaderStates[i].szReader.c_str();
+		auto tmpSize = rgReaderStates[i].szReader.size();
+//		_rgReaderStates[i]._szReader.reserve(tmpSize + 1);
+		_rgReaderStates[i]._szReader = QByteArray(rgReaderStates[i].szReader.c_str());
+      	_rgReaderStates[i]._dwCurrentState = rgReaderStates[i].dwCurrentState;
+      	_rgReaderStates[i]._dwEventState = rgReaderStates[i].dwEventState;
+      	_rgReaderStates[i]._cbAtr = rgReaderStates[i].rgbAtr.length();
+		_rgReaderStates[i]._rgbAtr.append(rgReaderStates[i].rgbAtr.c_str());
+
+		tmpBufferForSend.append(_rgReaderStates[i]._szReader);
+		objectBufferLength += _rgReaderStates[i]._szReader.size();
+
+      	tmpBufferForSend << _rgReaderStates[i]._dwCurrentState;
+		objectBufferLength += sizeof(_rgReaderStates[i]._dwCurrentState);
+
+		tmpBufferForSend << _rgReaderStates[i]._dwEventState;
+		objectBufferLength += sizeof(_rgReaderStates[i]._dwEventState);
+
+		tmpBufferForSend << _rgReaderStates[i]._cbAtr;
+		objectBufferLength += sizeof(_rgReaderStates[i]._cbAtr);
+
+		tmpBufferForSend.append(_rgReaderStates[i]._rgbAtr);
+		objectBufferLength += sizeof(_rgReaderStates[i]._rgbAtr.size());
+	}
+
+	if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){		
 		
-		tmpMszGroups.append(QByteArray::fromHex("04000200")); // Захардкодил - тоже пока не понятно, что это за значение
-		_mszGroups.append(QByteArray::fromHex("2400000053004300610072006400240041006c006c0052006500610064006500720073000000000000000000")); // Захардкодил текст 'SCard$AllReaders'
+		// tmpMszGroups.append(QByteArray::fromHex("04000200")); // Захардкодил - тоже пока не понятно, что это за значение
+		// _mszGroups.append(QByteArray::fromHex("2400000053004300610072006400240041006c006c0052006500610064006500720073000000000000000000")); // Захардкодил текст 'SCard$AllReaders'
 	}
 	else {
 		CWLOG_DBG(TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 		CWLOG_DBG(TAG, "!!!!!!! NEED REALISE SCARD_IOCTL_GETSTATUSCHANGEA !!!!!!!");
 		CWLOG_DBG(TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	}
-	_fmszReadersIsNULL = 0;
-	_ccReaders = SCARD_AUTOALLOCATE;	
-
-	objectBufferLength = sizeof(offset) + sizeof(_cBytes) + tmpMszGroups.size() + sizeof(_fmszReadersIsNULL) 
-								+ sizeof(_ccReaders) + sizeof(_hContext._cbContext) + sizeof(hContext) + _mszGroups.size()
+	
+	objectBufferLength += sizeof(offset) + sizeof(_dwTimeOut) + sizeof(_cReaders)								
 								+ getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
 								+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
-								+ sizeof(offset) + sizeof(_cBytes) + tmpMszGroups.size() + sizeof(_fmszReadersIsNULL) 
-								+ sizeof(_ccReaders) + sizeof(_hContext._cbContext) + sizeof(hContext) + _mszGroups.size());
+								+ objectBufferLength + sizeof(offset) + sizeof(_dwTimeOut) + sizeof(_cReaders));
 
 	packCommonTypeHeader(_inputBuffer);	
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 
 	_inputBuffer << offset;	
-	_inputBuffer << _cBytes;
-	_inputBuffer.append(tmpMszGroups);
-	_inputBuffer << _fmszReadersIsNULL;
-	_inputBuffer << _ccReaders;
+	_inputBuffer << _dwTimeOut;
+	_inputBuffer << _cReaders;
 	_inputBuffer << _hContext._cbContext;
-	_inputBuffer << hContext; 
+	_inputBuffer << hContext;
+	_inputBuffer.append(tmpBufferForSend);
 	_inputBuffer.append(padding); 	
-	_inputBuffer.append(_mszGroups);
+	
 	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+}
+
+void GetStatusChange_Call::setResponse(QByteArray& buf){
+
 }

@@ -85,7 +85,7 @@ public:
 
 //    printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, szReaderName);
 
-    _return.retValue = listReaders_Call->getReturnCBytes();
+    _return.retValue = listReaders_Call->getReturnCode();
     _return.mszReaders = listReaders_Call->getReturnReply().data();
 
     // if(SCARD_AUTOALLOCATE == pcchReaders) {
@@ -236,20 +236,23 @@ public:
     // -------------  End  -------------
   }
 
-  void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
+void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
     
     std::vector<SCARD_READERSTATE> inReaderStates(cReaders);
 
-    for (int i = 0; i < cReaders; i++) {
-      inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
-      inReaderStates[i].dwCurrentState = rgReaderStates[i].dwCurrentState;
-      inReaderStates[i].dwEventState = rgReaderStates[i].dwEventState;
-      inReaderStates[i].cbAtr = rgReaderStates[i].rgbAtr.length();
+    // for (int i = 0; i < cReaders; i++) {
+    //   inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
+    //   inReaderStates[i].dwCurrentState = rgReaderStates[i].dwCurrentState;
+    //   inReaderStates[i].dwEventState = rgReaderStates[i].dwEventState;
+    //   inReaderStates[i].cbAtr = rgReaderStates[i].rgbAtr.length();
 
-      memcpy(inReaderStates[i].rgbAtr, rgReaderStates[i].rgbAtr.data(), rgReaderStates[i].rgbAtr.length());
-    }
+    //   memcpy(inReaderStates[i].rgbAtr, rgReaderStates[i].rgbAtr.data(), rgReaderStates[i].rgbAtr.length());
+    // }
 
-    LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
+//    LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
+
+    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+    globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
 
@@ -260,7 +263,7 @@ public:
       outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
     }
 
-    _return.retValue = rv;
+    _return.retValue = getStatusChange_Call->getReturnCode();
     _return.rgReaderStates = outReaderStates;
   }
 
@@ -374,7 +377,7 @@ public:
 };
 
 void thrift_start_process() {
-  int port = 9093;
+  int port = 9092;
   ::std::shared_ptr<ogonHandler> handler(new ogonHandler());
   ::std::shared_ptr<TProcessor> processor(new ogonProcessor(handler));
   ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
