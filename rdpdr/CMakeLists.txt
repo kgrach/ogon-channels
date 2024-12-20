@@ -30,6 +30,7 @@ set(${MODULE_NAME}_SRCS
 	smartcard_driver/gen-cpp/ogon_types.cpp
     smartcard_driver/gen-cpp/ogon.cpp
 	smartcard/smartcard_message.h	
+	smartcard/smartcard_message.cpp
 	global_vars.h
 	global_vars.cpp
     )

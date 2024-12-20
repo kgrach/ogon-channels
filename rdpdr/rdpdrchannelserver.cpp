@@ -2428,27 +2428,39 @@ void RDPDrChannelServer::SmartCardOperationsThread::run() {
 
 	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() in !!!!!!");
 
-	quint32 ntStatus = STATUS_SUCCESS;
+	// quint32 ntStatus = STATUS_SUCCESS;
 	
-	std::shared_ptr<smartcardIOControl_Call> accessStartedCall = std::make_shared<ScardAccessStartedEvent_Call>();
-	if ((ntStatus = createHandle(accessStartedCall))) {
-		CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", accessStartedCall->getIOctlString(false), ntStatus);
-	}
+	// std::shared_ptr<smartcardIOControl_Call> accessStartedCall = std::make_shared<ScardAccessStartedEvent_Call>();
+	// if ((ntStatus = createHandle(accessStartedCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", accessStartedCall->getIOctlString(false), ntStatus);
+	// }
 
 	// std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
 	// if ((ntStatus = createHandle(establishContextCall))) {
 	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", establishContextCall->getIOctlString(false), ntStatus);
 	// }
 
-	// const char* ctxt = establishContextCall->getReturnContext().data();
-  	// long *hContext = (long*) ctxt;
+	// const char* ctxt = establishContextCall->getReturnReply().data();
+  	// quint64 *hContext = (quint64*) ctxt;
 
 	// std::shared_ptr<smartcardIOControl_Call> listReadersCall = std::make_shared<ListReaders_Call>(*hContext);
 	// if ((ntStatus = createHandle(listReadersCall))) {
 	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", listReadersCall->getIOctlString(false), ntStatus);
 	// }
 	
-	// CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
+	// // CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
+
+	// quint32 cReaders = 1;
+	// DWORD_RPC dwTimeOut = 0xFFFFFFFF;
+	// std::vector<scard_readerstate_rpc> rgReaderStates(1);
+	
+	// std::string str = "Aladdin R.D. JaCarta [SCR Interface] (000000000000) 00 00";
+	// rgReaderStates[0].szReader = str;
+	// rgReaderStates[0].dwEventState = SCARD_STATE_UNAWARE;
+	// rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
+
+	// std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(*hContext, dwTimeOut, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+    // globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
 	thrift_start_process();
 

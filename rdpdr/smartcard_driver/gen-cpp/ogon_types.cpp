@@ -226,7 +226,7 @@ void return_lr::__set_retValue(const LONG_RPC val) {
   this->retValue = val;
 }
 
-void return_lr::__set_mszReaders(const LPSTR_RPC& val) {
+void return_lr::__set_mszReaders(const LPBYTE_RPC& val) {
   this->mszReaders = val;
 }
 std::ostream& operator<<(std::ostream& out, const return_lr& obj)
@@ -267,7 +267,7 @@ uint32_t return_lr::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->mszReaders);
+          xfer += iprot->readBinary(this->mszReaders);
           this->__isset.mszReaders = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -295,7 +295,7 @@ uint32_t return_lr::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("mszReaders", ::apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->mszReaders);
+  xfer += oprot->writeBinary(this->mszReaders);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -338,7 +338,7 @@ void return_lrg::__set_retValue(const LONG_RPC val) {
   this->retValue = val;
 }
 
-void return_lrg::__set_mszGroups(const LPSTR_RPC& val) {
+void return_lrg::__set_mszGroups(const LPBYTE_RPC& val) {
   this->mszGroups = val;
 }
 std::ostream& operator<<(std::ostream& out, const return_lrg& obj)
@@ -379,7 +379,7 @@ uint32_t return_lrg::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->mszGroups);
+          xfer += iprot->readBinary(this->mszGroups);
           this->__isset.mszGroups = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -407,7 +407,7 @@ uint32_t return_lrg::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("mszGroups", ::apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->mszGroups);
+  xfer += oprot->writeBinary(this->mszGroups);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -582,7 +582,7 @@ void return_s::__set_retValue(const LONG_RPC val) {
   this->retValue = val;
 }
 
-void return_s::__set_szReaderName(const LPSTR_RPC& val) {
+void return_s::__set_szReaderName(const LPBYTE_RPC& val) {
   this->szReaderName = val;
 }
 
@@ -635,13 +635,13 @@ uint32_t return_s::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->szReaderName);
+          xfer += iprot->readBinary(this->szReaderName);
           this->__isset.szReaderName = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 4:
+      case 3:
         if (ftype == ::apache::thrift::protocol::T_I64) {
           xfer += iprot->readI64(this->pdwState);
           this->__isset.pdwState = true;
@@ -649,7 +649,7 @@ uint32_t return_s::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 5:
+      case 4:
         if (ftype == ::apache::thrift::protocol::T_I64) {
           xfer += iprot->readI64(this->pdwProtocol);
           this->__isset.pdwProtocol = true;
@@ -657,7 +657,7 @@ uint32_t return_s::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 6:
+      case 5:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
           xfer += iprot->readBinary(this->pbAtr);
           this->__isset.pbAtr = true;
@@ -687,18 +687,18 @@ uint32_t return_s::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("szReaderName", ::apache::thrift::protocol::T_STRING, 2);
-  xfer += oprot->writeString(this->szReaderName);
+  xfer += oprot->writeBinary(this->szReaderName);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("pdwState", ::apache::thrift::protocol::T_I64, 4);
+  xfer += oprot->writeFieldBegin("pdwState", ::apache::thrift::protocol::T_I64, 3);
   xfer += oprot->writeI64(this->pdwState);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("pdwProtocol", ::apache::thrift::protocol::T_I64, 5);
+  xfer += oprot->writeFieldBegin("pdwProtocol", ::apache::thrift::protocol::T_I64, 4);
   xfer += oprot->writeI64(this->pdwProtocol);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("pbAtr", ::apache::thrift::protocol::T_STRING, 6);
+  xfer += oprot->writeFieldBegin("pbAtr", ::apache::thrift::protocol::T_STRING, 5);
   xfer += oprot->writeBinary(this->pbAtr);
   xfer += oprot->writeFieldEnd();
 
@@ -1106,7 +1106,7 @@ scard_readerstate_rpc::~scard_readerstate_rpc() noexcept {
 }
 
 
-void scard_readerstate_rpc::__set_szReader(const LPSTR_RPC& val) {
+void scard_readerstate_rpc::__set_szReader(const LPBYTE_RPC& val) {
   this->szReader = val;
 }
 
@@ -1151,7 +1151,7 @@ uint32_t scard_readerstate_rpc::read(::apache::thrift::protocol::TProtocol* ipro
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readString(this->szReader);
+          xfer += iprot->readBinary(this->szReader);
           this->__isset.szReader = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1199,7 +1199,7 @@ uint32_t scard_readerstate_rpc::write(::apache::thrift::protocol::TProtocol* opr
   xfer += oprot->writeStructBegin("scard_readerstate_rpc");
 
   xfer += oprot->writeFieldBegin("szReader", ::apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeString(this->szReader);
+  xfer += oprot->writeBinary(this->szReader);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("dwCurrentState", ::apache::thrift::protocol::T_I64, 2);

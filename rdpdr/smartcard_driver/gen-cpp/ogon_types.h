@@ -171,13 +171,13 @@ class return_lr : public virtual ::apache::thrift::TBase {
 
   virtual ~return_lr() noexcept;
   LONG_RPC retValue;
-  LPSTR_RPC mszReaders;
+  LPBYTE_RPC mszReaders;
 
   _return_lr__isset __isset;
 
   void __set_retValue(const LONG_RPC val);
 
-  void __set_mszReaders(const LPSTR_RPC& val);
+  void __set_mszReaders(const LPBYTE_RPC& val);
 
   bool operator == (const return_lr & rhs) const
   {
@@ -219,13 +219,13 @@ class return_lrg : public virtual ::apache::thrift::TBase {
 
   virtual ~return_lrg() noexcept;
   LONG_RPC retValue;
-  LPSTR_RPC mszGroups;
+  LPBYTE_RPC mszGroups;
 
   _return_lrg__isset __isset;
 
   void __set_retValue(const LONG_RPC val);
 
-  void __set_mszGroups(const LPSTR_RPC& val);
+  void __set_mszGroups(const LPBYTE_RPC& val);
 
   bool operator == (const return_lrg & rhs) const
   {
@@ -324,7 +324,7 @@ class return_s : public virtual ::apache::thrift::TBase {
 
   virtual ~return_s() noexcept;
   LONG_RPC retValue;
-  LPSTR_RPC szReaderName;
+  LPBYTE_RPC szReaderName;
   DWORD_RPC pdwState;
   DWORD_RPC pdwProtocol;
   LPBYTE_RPC pbAtr;
@@ -333,7 +333,7 @@ class return_s : public virtual ::apache::thrift::TBase {
 
   void __set_retValue(const LONG_RPC val);
 
-  void __set_szReaderName(const LPSTR_RPC& val);
+  void __set_szReaderName(const LPBYTE_RPC& val);
 
   void __set_pdwState(const DWORD_RPC val);
 
@@ -538,14 +538,14 @@ class scard_readerstate_rpc : public virtual ::apache::thrift::TBase {
   }
 
   virtual ~scard_readerstate_rpc() noexcept;
-  LPSTR_RPC szReader;
+  LPBYTE_RPC szReader;
   DWORD_RPC dwCurrentState;
   DWORD_RPC dwEventState;
   LPBYTE_RPC rgbAtr;
 
   _scard_readerstate_rpc__isset __isset;
 
-  void __set_szReader(const LPSTR_RPC& val);
+  void __set_szReader(const LPBYTE_RPC& val);
 
   void __set_dwCurrentState(const DWORD_RPC val);
 

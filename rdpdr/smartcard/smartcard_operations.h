@@ -82,6 +82,13 @@
 // Интерфейс для всех возможных запросов
 class smartcardIOControl_Call {
 protected:
+	enum ndr_ptr_t
+	{
+		NDR_PTR_FULL,
+		NDR_PTR_SIMPLE,
+		NDR_PTR_FIXED
+	};
+
 	quint32 	_ioControlCode{0};
 	QByteArray 	_inputBuffer;
 	quint32 	_outputBufferLength{2048}; 	// [MS-RDPESC] 3.2.5.1
@@ -90,10 +97,18 @@ protected:
 
 	void packCommonTypeHeader(QByteArray& buf);
 	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
+	uint32_t packRedirScardContext(const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr); // RPC NDR [MS-RPCE 2.2.6.2]
+
 	qint32 unpackCommonTypeHeader(int size, QDataStream& buf);
 	qint32 unpackPrivateTypeHeader(int size, QDataStream& buf);
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
+	uint32_t unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index);
+
+	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr); // RPC NDR [MS-RPCE 2.2.6.2]
+	bool ndrPointerWrite(uint32_t& index, uint32_t length, quint32& ndrPtr);
+	uint32_t ndrWrite(const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, bool unicode);
+
 public:
 	virtual ~smartcardIOControl_Call() noexcept = default;
 
@@ -149,14 +164,15 @@ public:
 class ListReaders_Call :  public smartcardIOControl_Call {
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_cBytes{0};
-	QByteArray 			_mszGroups;
+//	QByteArray 			_mszGroups;
+	QString 			_mszGroups;
 	quint32 			_fmszReadersIsNULL{0};
 	quint32				_ccReaders{0};
 
 	ListReaders_Return	_response;
 
 public:
-	ListReaders_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSW);
+	ListReaders_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSA);
 	virtual ~ListReaders_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
@@ -165,6 +181,24 @@ public:
 	quint32 getReturnCBytes() const {return _response._cBytes;}
 };
 
+class Connect_Call :  public smartcardIOControl_Call {
+	
+	QByteArray 		_szReader;
+	// Connect_Common struct:
+	REDIR_SCARDCONTEXT 	_hContext;
+	quint32 			_dwShareMode;
+	quint32 			_dwPreferredProtocols;
+
+	Connect_Return	_response;
+
+public:
+	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTA);
+	virtual ~Connect_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	qint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._hCard._pbHandle;}
+};
 
 class GetStatusChange_Call :  public smartcardIOControl_Call {
 	REDIR_SCARDCONTEXT 	_hContext;
@@ -180,7 +214,7 @@ public:
 
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
-	const QByteArray& getReturnReply() const override {return _response._rgReaderStates->_rgbAtr;}
+	const QByteArray& getReturnReply(/*quint32 num*/) const override {/*return _response._rgReaderStates[num]._rgbAtr;*/}
 
 };
 

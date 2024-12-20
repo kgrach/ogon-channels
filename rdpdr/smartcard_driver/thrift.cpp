@@ -14,6 +14,7 @@ using namespace ::apache::thrift::server;
 
 //#include <PCSC/winscard.h>
 #include <mutex>
+#include <iostream>
 
 class ogonHandler : virtual public ogonIf {
 
@@ -53,6 +54,7 @@ public:
 }
 
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) {
+    // Your implementation goes here
     printf("ReleaseContext\n");
 
     printf ("Server received SCardReleaseContext dwScope: %ld\n", hContext);
@@ -71,8 +73,6 @@ public:
 
     std::string readerBuf;
 
-    printf ("Server received SCardListReaders: SCARDCONTEXT=%ld\n", hContext);
-
     if(SCARD_AUTOALLOCATE != szReaderNameLen) {
       readerBuf.resize(szReaderNameLen);
       szReaderName = readerBuf.data();
@@ -83,14 +83,9 @@ public:
     std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext);
     globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
-//    printf ("SCardListReaders return %ld, Server send list readers=%s\n", rv, szReaderName);
-
     _return.retValue = listReaders_Call->getReturnCode();
     _return.mszReaders = listReaders_Call->getReturnReply().data();
 
-    // if(SCARD_AUTOALLOCATE == pcchReaders) {
-    //   SCardFreeMemory(hContext, szReaderName);
-    // }
   }
 
   void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
@@ -98,23 +93,21 @@ public:
     LPSTR szGroups = NULL;
     DWORD szGroupsNameLen = pcchGroups;
 
-    std::shared_ptr<std::string> readerBuff = nullptr;
+    std::string readerBuf;
 
     if(SCARD_AUTOALLOCATE != szGroupsNameLen) {
-
-      readerBuff = std::make_shared<std::string>();
-      readerBuff->resize(szGroupsNameLen);
-      szGroups = readerBuff->data();
+      readerBuf.resize(szGroupsNameLen);
+      szGroups = readerBuf.data();
     }
 
     printf ("Server received SCardListReaderGroups: SCARDCONTEXT=%ld\n", hContext);
 
-    LONG rv = SCardListReaderGroups(hContext, (LPSTR)&szGroups, &szGroupsNameLen);
+    LONG rv = SCardListReaderGroups(hContext, (readerBuf.empty() ? (LPSTR)&szGroups : szGroups), &szGroupsNameLen);
 
     printf ("SCardListReaderGroups return %ld, Server send list groups=%s\n", rv, szGroups);
 
     _return.retValue = rv;
-    _return.mszGroups = szGroups;
+    _return.mszGroups = std::string(szGroups, szGroupsNameLen);
 
     if(SCARD_AUTOALLOCATE == pcchGroups) {
       SCardFreeMemory(hContext, szGroups);
@@ -127,21 +120,15 @@ public:
     SCARDHANDLE phCard;
     DWORD pdwActiveProtocol;
 
-    printf ("Server received SCardConnect: SCARDCONTEXT=%ld\n", hContext);
+//    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
 
-    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
+    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols);
+    globalSmartCardOperationsThread->createHandle(connect_Call);
 
-    printf ("SCardConnect return %ld, Server send SCARDHANDLE=%ld\n", rv, phCard);
-
-    _return.retValue = rv;
+    _return.retValue = connect_Call->getReturnCode();
     _return.phCard = phCard;
     _return.pdwActiveProtocol = pdwActiveProtocol;
-
-    // This is code for current project only, it don't need into ogon
-    // ------------- Begin -------------
-    std::lock_guard<std::mutex> lock(mtx_);
-    Card2Context_[phCard] = hContext;
-    // -------------  End  -------------
+//    _return.mszReaders = connect_Call->getReturnReply().data();
   }
 
   void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {
@@ -187,33 +174,31 @@ public:
     LPSTR szReaderName = NULL;
     DWORD szReaderNameLen = pcchReaderLen;
 
-    std::shared_ptr<std::string> readerBuff = nullptr;
+    std::string readerBuf;
 
     if(SCARD_AUTOALLOCATE != szReaderNameLen) {
-
-      readerBuff = std::make_shared<std::string>();
-      readerBuff->resize(szReaderNameLen);
-      szReaderName = readerBuff->data();
+      readerBuf.resize(szReaderNameLen);
+      szReaderName = readerBuf.data();
     }
 
     LPBYTE pAtr = NULL;
     DWORD AtrLen = pcbAtrLen;
 
-    std::shared_ptr<std::string> atrBuff = nullptr;
+    std::string atrBuf;
 
     if(SCARD_AUTOALLOCATE != AtrLen) {
-
-      atrBuff = std::make_shared<std::string>();
-      atrBuff->resize(AtrLen);
-      pAtr = (unsigned char*)atrBuff->data();
+      atrBuf.resize(AtrLen);
+      pAtr = (unsigned char*)atrBuf.data();
     }
 
     printf("Server received SCardStatus: SCARDHANDLE=%ld\n", hCard);
 
-    LONG rv = SCardStatus(hCard, szReaderName, &szReaderNameLen, &pdwState, &pdwProtocol, pAtr, &AtrLen);
+    LONG rv = SCardStatus(hCard, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen, 
+                                  &pdwState, &pdwProtocol, 
+                                 (atrBuf.empty() ? (LPBYTE)&pAtr : pAtr), &AtrLen);
 
     _return.retValue = rv;
-    _return.szReaderName = szReaderName;
+    _return.szReaderName = std::string(szReaderName, szReaderNameLen);
     _return.pdwState = pdwState;
     _return.pdwProtocol = pdwProtocol;
     _return.pbAtr = std::string((char*)pAtr, AtrLen);
@@ -238,7 +223,7 @@ public:
 
 void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
     
-    std::vector<SCARD_READERSTATE> inReaderStates(cReaders);
+    // std::vector<SCARD_READERSTATE> inReaderStates(cReaders);
 
     // for (int i = 0; i < cReaders; i++) {
     //   inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
@@ -254,14 +239,14 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
     std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
     globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
-    std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
+     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
 
-    for (int i = 0; i < cReaders; i++) {
-      outReaderStates[i].szReader = inReaderStates[i].szReader;
-      outReaderStates[i].dwCurrentState = inReaderStates[i].dwCurrentState;
-      outReaderStates[i].dwEventState = inReaderStates[i].dwEventState;
-      outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
-    }
+    // for (int i = 0; i < cReaders; i++) {
+    //   outReaderStates[i].szReader = inReaderStates[i].szReader;
+    //   outReaderStates[i].dwCurrentState = inReaderStates[i].dwCurrentState;
+    //   outReaderStates[i].dwEventState = inReaderStates[i].dwEventState;
+    //   outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
+    // }
 
     _return.retValue = getStatusChange_Call->getReturnCode();
     _return.rgReaderStates = outReaderStates;
@@ -317,18 +302,17 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
     LPBYTE pAttr = NULL;
     DWORD AttrLen = pcbAttrLen;
 
-    std::shared_ptr<std::string> attrBuff = nullptr;
+    std::string attrBuf;
 
     if(SCARD_AUTOALLOCATE != AttrLen) {
 
-      attrBuff = std::make_shared<std::string>();
-      attrBuff->resize(AttrLen);
-      pAttr = (unsigned char*)attrBuff->data();
+      attrBuf.resize(AttrLen);
+      pAttr = (unsigned char*)attrBuf.data();
     }
 
     printf("Server received SCardGetAttrib: hCard=%ld, pcbAttrLen=%ld\n", hCard, pcbAttrLen);
 
-    LONG rv = SCardGetAttrib(hCard, dwAttrId, pAttr, &AttrLen);
+    LONG rv = SCardGetAttrib(hCard, dwAttrId, (attrBuf.empty() ? (LPBYTE)&pAttr : pAttr), &AttrLen);
 
     printf("SCardGetAttrib return %ld, pAttr=%p\n", rv, pAttr);
 
@@ -385,6 +369,10 @@ void thrift_start_process() {
   ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
-  server.serve();
+  try{
+    server.serve();
+  }catch(...){
+    std::cout << "here";
+  }
 }
 
