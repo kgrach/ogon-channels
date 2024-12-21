@@ -84,34 +84,38 @@ public:
     globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
     _return.retValue = listReaders_Call->getReturnCode();
-    _return.mszReaders = listReaders_Call->getReturnReply().data();
+    
+    _return.mszReaders = std::string(listReaders_Call->getReturnReply().data(),listReaders_Call->getReturnCBytes());
+
+    auto sizeArr = listReaders_Call->getReturnReply().size();
+    auto size = _return.mszReaders.size();
 
   }
 
   void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
     // Your implementation goes here
-    LPSTR szGroups = NULL;
-    DWORD szGroupsNameLen = pcchGroups;
+    // LPSTR szGroups = NULL;
+    // DWORD szGroupsNameLen = pcchGroups;
 
-    std::string readerBuf;
+    // std::string readerBuf;
 
-    if(SCARD_AUTOALLOCATE != szGroupsNameLen) {
-      readerBuf.resize(szGroupsNameLen);
-      szGroups = readerBuf.data();
-    }
+    // if(SCARD_AUTOALLOCATE != szGroupsNameLen) {
+    //   readerBuf.resize(szGroupsNameLen);
+    //   szGroups = readerBuf.data();
+    // }
 
-    printf ("Server received SCardListReaderGroups: SCARDCONTEXT=%ld\n", hContext);
+    // printf ("Server received SCardListReaderGroups: SCARDCONTEXT=%ld\n", hContext);
 
-    LONG rv = SCardListReaderGroups(hContext, (readerBuf.empty() ? (LPSTR)&szGroups : szGroups), &szGroupsNameLen);
+    // LONG rv = SCardListReaderGroups(hContext, (readerBuf.empty() ? (LPSTR)&szGroups : szGroups), &szGroupsNameLen);
 
-    printf ("SCardListReaderGroups return %ld, Server send list groups=%s\n", rv, szGroups);
+    // printf ("SCardListReaderGroups return %ld, Server send list groups=%s\n", rv, szGroups);
 
-    _return.retValue = rv;
-    _return.mszGroups = std::string(szGroups, szGroupsNameLen);
+    // _return.retValue = rv;
+    // _return.mszGroups = std::string(szGroups, szGroupsNameLen);
 
-    if(SCARD_AUTOALLOCATE == pcchGroups) {
-      SCardFreeMemory(hContext, szGroups);
-    }
+    // if(SCARD_AUTOALLOCATE == pcchGroups) {
+    //   SCardFreeMemory(hContext, szGroups);
+    // }
   }
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
@@ -122,28 +126,30 @@ public:
 
 //    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
 
-    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols);
+    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTW);
     globalSmartCardOperationsThread->createHandle(connect_Call);
 
     _return.retValue = connect_Call->getReturnCode();
-    _return.phCard = phCard;
-    _return.pdwActiveProtocol = pdwActiveProtocol;
+    const char* chHandle = connect_Call->getReturnReply().data();
+    SCARDHANDLE_RPC* handle = (SCARDHANDLE_RPC*) chHandle; 
+    _return.phCard = *handle;
+    _return.pdwActiveProtocol = connect_Call->getActiveProtocol();
 //    _return.mszReaders = connect_Call->getReturnReply().data();
   }
 
   void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {
     // Your implementation goes here
-    printf("Reconnect\n");
-    DWORD pdwActiveProtocol;
+    // printf("Reconnect\n");
+    // DWORD pdwActiveProtocol;
 
-    printf ("Server received SCardReconnect: SCARDHANDLE=%ld\n", hCard);
+    // printf ("Server received SCardReconnect: SCARDHANDLE=%ld\n", hCard);
 
-    LONG rv = SCardReconnect(hCard, dwShareMode, dwPreferredProtocols, dwInitialization, &pdwActiveProtocol);
+    // LONG rv = SCardReconnect(hCard, dwShareMode, dwPreferredProtocols, dwInitialization, &pdwActiveProtocol);
 
-    printf ("SCardReconnect return %ld, Server send pdwActiveProtocol=%ld\n", rv, pdwActiveProtocol);
+    // printf ("SCardReconnect return %ld, Server send pdwActiveProtocol=%ld\n", rv, pdwActiveProtocol);
 
-    _return.retValue = rv;
-    _return.pdwActiveProtocol = pdwActiveProtocol;
+    // _return.retValue = rv;
+    // _return.pdwActiveProtocol = pdwActiveProtocol;
   }
 
   LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
@@ -228,29 +234,27 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
     // for (int i = 0; i < cReaders; i++) {
     //   inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
     //   inReaderStates[i].dwCurrentState = rgReaderStates[i].dwCurrentState;
-    //   inReaderStates[i].dwEventState = rgReaderStates[i].dwEventState;
-    //   inReaderStates[i].cbAtr = rgReaderStates[i].rgbAtr.length();
-
-    //   memcpy(inReaderStates[i].rgbAtr, rgReaderStates[i].rgbAtr.data(), rgReaderStates[i].rgbAtr.length());
     // }
 
-//    LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
+    // LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
 
     std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
     globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
-     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
+    std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
 
     // for (int i = 0; i < cReaders; i++) {
-    //   outReaderStates[i].szReader = inReaderStates[i].szReader;
-    //   outReaderStates[i].dwCurrentState = inReaderStates[i].dwCurrentState;
     //   outReaderStates[i].dwEventState = inReaderStates[i].dwEventState;
     //   outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
     // }
 
+    // _return.retValue = rv;
+    // _return.rgReaderStates = outReaderStates;
+
     _return.retValue = getStatusChange_Call->getReturnCode();
     _return.rgReaderStates = outReaderStates;
-  }
+
+}
 
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) {
     // Your implementation goes here

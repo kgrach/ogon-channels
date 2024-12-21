@@ -1106,7 +1106,7 @@ scard_readerstate_rpc::~scard_readerstate_rpc() noexcept {
 }
 
 
-void scard_readerstate_rpc::__set_szReader(const LPBYTE_RPC& val) {
+void scard_readerstate_rpc::__set_szReader(const LPSTR_RPC& val) {
   this->szReader = val;
 }
 
@@ -1151,7 +1151,7 @@ uint32_t scard_readerstate_rpc::read(::apache::thrift::protocol::TProtocol* ipro
     {
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRING) {
-          xfer += iprot->readBinary(this->szReader);
+          xfer += iprot->readString(this->szReader);
           this->__isset.szReader = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1199,7 +1199,7 @@ uint32_t scard_readerstate_rpc::write(::apache::thrift::protocol::TProtocol* opr
   xfer += oprot->writeStructBegin("scard_readerstate_rpc");
 
   xfer += oprot->writeFieldBegin("szReader", ::apache::thrift::protocol::T_STRING, 1);
-  xfer += oprot->writeBinary(this->szReader);
+  xfer += oprot->writeString(this->szReader);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldBegin("dwCurrentState", ::apache::thrift::protocol::T_I64, 2);

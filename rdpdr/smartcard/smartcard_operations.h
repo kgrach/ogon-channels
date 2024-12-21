@@ -104,6 +104,7 @@ protected:
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
 	uint32_t unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index);
+	int32_t unpackRedirScardHandle(RdpStreamBuffer& stream, REDIR_SCARDHANDLE& handle, uint32_t& index);
 
 	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr); // RPC NDR [MS-RPCE 2.2.6.2]
 	bool ndrPointerWrite(uint32_t& index, uint32_t length, quint32& ndrPtr);
@@ -183,13 +184,13 @@ public:
 
 class Connect_Call :  public smartcardIOControl_Call {
 	
-	QByteArray 		_szReader;
+	QString 			_szReader;
 	// Connect_Common struct:
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_dwShareMode;
 	quint32 			_dwPreferredProtocols;
 
-	Connect_Return	_response;
+	Connect_Return		_response;
 
 public:
 	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTA);
@@ -198,6 +199,8 @@ public:
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._hCard._pbHandle;}
+//	int64_t getHCard() const {return _response._hCard._pbHandle;}
+	int64_t getActiveProtocol() const {_response._dwActiveProtocol;}
 };
 
 class GetStatusChange_Call :  public smartcardIOControl_Call {
@@ -215,7 +218,6 @@ public:
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply(/*quint32 num*/) const override {/*return _response._rgReaderStates[num]._rgbAtr;*/}
-
 };
 
 

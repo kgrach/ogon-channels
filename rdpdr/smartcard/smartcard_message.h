@@ -18,6 +18,7 @@ struct REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
 
 struct REDIR_SCARDHANDLE
 {
+	REDIR_SCARDCONTEXT _Context;
 	quint32 	_cbHandle;
 	QByteArray 	_pbHandle;
 };

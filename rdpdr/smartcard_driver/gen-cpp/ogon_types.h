@@ -538,14 +538,14 @@ class scard_readerstate_rpc : public virtual ::apache::thrift::TBase {
   }
 
   virtual ~scard_readerstate_rpc() noexcept;
-  LPBYTE_RPC szReader;
+  LPSTR_RPC szReader;
   DWORD_RPC dwCurrentState;
   DWORD_RPC dwEventState;
   LPBYTE_RPC rgbAtr;
 
   _scard_readerstate_rpc__isset __isset;
 
-  void __set_szReader(const LPBYTE_RPC& val);
+  void __set_szReader(const LPSTR_RPC& val);
 
   void __set_dwCurrentState(const DWORD_RPC val);
 
