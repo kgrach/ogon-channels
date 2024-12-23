@@ -193,14 +193,14 @@ class Connect_Call :  public smartcardIOControl_Call {
 	Connect_Return		_response;
 
 public:
-	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTA);
+	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTW);
 	virtual ~Connect_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._hCard._pbHandle;}
 //	int64_t getHCard() const {return _response._hCard._pbHandle;}
-	int64_t getActiveProtocol() const {_response._dwActiveProtocol;}
+	quint32 getActiveProtocol() const {return _response._dwActiveProtocol;}
 };
 
 class GetStatusChange_Call :  public smartcardIOControl_Call {

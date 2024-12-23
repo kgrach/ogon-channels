@@ -134,7 +134,6 @@ public:
     SCARDHANDLE_RPC* handle = (SCARDHANDLE_RPC*) chHandle; 
     _return.phCard = *handle;
     _return.pdwActiveProtocol = connect_Call->getActiveProtocol();
-//    _return.mszReaders = connect_Call->getReturnReply().data();
   }
 
   void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {

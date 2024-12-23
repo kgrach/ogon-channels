@@ -417,6 +417,8 @@ uint32_t smartcardIOControl_Call::unpackRedirScardContext(RdpStreamBuffer& strea
 
 int32_t smartcardIOControl_Call::unpackRedirScardHandle(RdpStreamBuffer& stream, REDIR_SCARDHANDLE& handle, uint32_t& index)
 {
+	quint32 pbHandleNdrPtr;
+
 	if (!stream.verifyRemainingLength(4))
 	{
 		CWLOG_WRN(TAG, "SCARDHANDLE is too short: %" PRIuz "", stream.remainingLength());          
@@ -431,7 +433,7 @@ int32_t smartcardIOControl_Call::unpackRedirScardHandle(RdpStreamBuffer& stream,
 		return STATUS_BUFFER_TOO_SMALL;
 	}
 
-	if(!ndrPointerRead(stream, index, nullptr)){ 
+	if(!ndrPointerRead(stream, index, &pbHandleNdrPtr)){ 
 		return ERROR_INVALID_DATA;
     }
 	return SCARD_S_SUCCESS;
@@ -737,7 +739,8 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 void Connect_Call::setResponse(QByteArray& buf){
 	uint32_t 	index = 0;
 	quint32 objectBufferLength;
-	quint64 offset = 0; 
+	quint32 offset4 = 0;
+	quint64 offset8 = 0;
 	RdpStreamBuffer rsb(buf);
 	rsb.sealLength(buf.size());
 
@@ -762,7 +765,21 @@ void Connect_Call::setResponse(QByteArray& buf){
 	}
 
 	rsb >> _response._dwActiveProtocol;
-//	rsb >> _response._hCard._Context._pbContext;	
+
+	rsb >> offset4; // размер _cbContext (это значение не используется)
+	// получим hContext
+	auto startContext = rsb.pointer();
+	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hCard._Context._cbContext) - 4 /* pbContextNdrPtr */ 
+					  - sizeof(_response._hCard._cbHandle) - 4 /* pbHandleNdrPtr */ - sizeof(_response._dwActiveProtocol);
+	_response._hCard._Context._pbContext = QByteArray(startContext, endContext); 
+
+	rsb >> offset8; // сдвинули на 8 байт - размер Context (прочитали значение выше)
+	rsb >> offset4; // размер _cbHandle (это значение не используется)
+	// получим _pbHandle
+	startContext = rsb.pointer();
+	endContext -= _response._hCard._Context._cbContext;
+	_response._hCard._pbHandle = QByteArray(startContext, endContext); 
+
 }
 
 
