@@ -68,16 +68,7 @@
 #define SCARD_IOCTL_GETREADERICON RDP_SCARD_CTL_CODE(65)      /* SCardGetReaderIconA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 #define SCARD_IOCTL_GETDEVICETYPEID RDP_SCARD_CTL_CODE(66)    /* SCardGetDeviceTypeIdA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 
-// #if defined SCARD_SCOPE_USER 
-// #undef SCARD_SCOPE_USER
-// #endif
-// #if defined SCARD_SCOPE_TERMINAL 
-// #undef SCARD_SCOPE_TERMINAL
-// #endif
-// #if defined SCARD_SCOPE_SYSTEM 
-// #undef SCARD_SCOPE_SYSTEM
-// #endif
-		
+#define OFFSET 4 // TODO: пока не понятно, но всегда не хватает этих 4х байт
 
 // Интерфейс для всех возможных запросов
 class smartcardIOControl_Call {
@@ -92,12 +83,12 @@ protected:
 	quint32 	_ioControlCode{0};
 	QByteArray 	_inputBuffer;
 	quint32 	_outputBufferLength{2048}; 	// [MS-RDPESC] 3.2.5.1
-
-
+	quint32 	_paddingSize{0};
 
 	void packCommonTypeHeader(QByteArray& buf);
 	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
-	uint32_t packRedirScardContext(const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr); // RPC NDR [MS-RPCE 2.2.6.2]
+	uint32_t packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr); // RPC NDR [MS-RPCE 2.2.6.2]
+	int32_t packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode);
 
 	qint32 unpackCommonTypeHeader(int size, QDataStream& buf);
 	qint32 unpackPrivateTypeHeader(int size, QDataStream& buf);
@@ -107,8 +98,8 @@ protected:
 	int32_t unpackRedirScardHandle(RdpStreamBuffer& stream, REDIR_SCARDHANDLE& handle, uint32_t& index);
 
 	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr); // RPC NDR [MS-RPCE 2.2.6.2]
-	bool ndrPointerWrite(uint32_t& index, uint32_t length, quint32& ndrPtr);
-	uint32_t ndrWrite(const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, bool unicode);
+	bool ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr);
+	uint32_t ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
 
 public:
 	virtual ~smartcardIOControl_Call() noexcept = default;
@@ -173,7 +164,7 @@ class ListReaders_Call :  public smartcardIOControl_Call {
 	ListReaders_Return	_response;
 
 public:
-	ListReaders_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSA);
+	ListReaders_Call(quint64 hContext, const std::string& readerName, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSA);
 	virtual ~ListReaders_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
@@ -184,7 +175,8 @@ public:
 
 class Connect_Call :  public smartcardIOControl_Call {
 	
-	QString 			_szReader;
+	QByteArray 			_szReader;
+//	QString 			_szReader;
 	// Connect_Common struct:
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_dwShareMode;
@@ -193,7 +185,7 @@ class Connect_Call :  public smartcardIOControl_Call {
 	Connect_Return		_response;
 
 public:
-	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTW);
+	Connect_Call(quint64 hContext, const std::string& szReader, int64_t dwShareMode, int64_t dwPreferredProtocols, quint32 ioControlCode = SCARD_IOCTL_CONNECTA);
 	virtual ~Connect_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
@@ -212,7 +204,7 @@ class GetStatusChange_Call :  public smartcardIOControl_Call {
 	GetStatusChange_Return	_response;
 
 public:
-	GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEW);
+	GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, quint32 cReaders, quint32 ioControlCode = SCARD_IOCTL_GETSTATUSCHANGEA);
 	virtual ~GetStatusChange_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;

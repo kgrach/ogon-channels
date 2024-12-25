@@ -68,7 +68,7 @@ public:
 
   void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
 
-    LPSTR szReaderName = NULL;
+    std::string szReaderName = "SCard$AllReaders";
     DWORD szReaderNameLen = pcchReaders;
 
     std::string readerBuf;
@@ -80,7 +80,7 @@ public:
 
     // LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
 
-    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext);
+    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext, szReaderName, SCARD_IOCTL_LISTREADERSW);
     globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
     _return.retValue = listReaders_Call->getReturnCode();
@@ -237,7 +237,7 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
 
     // LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
 
-    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEW);
     globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
