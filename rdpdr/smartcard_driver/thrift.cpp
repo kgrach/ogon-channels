@@ -127,7 +127,7 @@ public:
 
 //    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
 
-    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTA);
+    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTW);
     globalSmartCardOperationsThread->createHandle(connect_Call);
 
     _return.retValue = connect_Call->getReturnCode();
@@ -247,7 +247,7 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
 // rgReaderStates___[1].szReader = "Aladdin R.D. JaCarta [SCR Interface] (000000000000) 00 00";
 // rgReaderStates___[1].dwCurrentState = SCARD_STATE_EMPTY;
 // std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates___, cReaders, SCARD_IOCTL_GETSTATUSCHANGEW);
-    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEW);
     globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);

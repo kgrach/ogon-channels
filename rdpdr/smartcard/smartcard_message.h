@@ -13,7 +13,6 @@ struct REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
 {	
 	quint32 	_cbContext; 			// The number of bytes in the _pbContext
 	QByteArray 	_pbContext; 			// littleEndian
-//	QByteArray _pbContextReverse; 	// bigEndian
 };
 
 struct REDIR_SCARDHANDLE
@@ -22,11 +21,6 @@ struct REDIR_SCARDHANDLE
 	quint32 	_cbHandle;
 	QByteArray 	_pbHandle;
 };
-
-// class Long_Call
-// {
-// 	qint32 _longValue;
-// };
 
 struct Long_Return
 {
@@ -60,7 +54,6 @@ class ReaderState // ReaderStateA и ReaderStateW. В зависимости о�
 {
 public:
 	QByteArray 	_szReader;
-//	LPVOID 		_pvUserData;
 	quint32 	_dwCurrentState;
 	quint32 	_dwEventState;
 	quint32 	_cbAtr;

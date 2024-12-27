@@ -68,8 +68,6 @@
 #define SCARD_IOCTL_GETREADERICON RDP_SCARD_CTL_CODE(65)      /* SCardGetReaderIconA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 #define SCARD_IOCTL_GETDEVICETYPEID RDP_SCARD_CTL_CODE(66)    /* SCardGetDeviceTypeIdA */ // НЕ СООТВЕТСТВУЕТ С FREERDP !!!
 
-#define OFFSET 4 // TODO: пока не понятно, но всегда не хватает этих 4х байт
-
 // Интерфейс для всех возможных запросов
 class smartcardIOControl_Call {
 protected:
@@ -83,22 +81,19 @@ protected:
 	quint32 	_ioControlCode{0};
 	QByteArray 	_inputBuffer;
 	quint32 	_outputBufferLength{2048}; 	// [MS-RDPESC] 3.2.5.1
-	quint32 	_paddingSize{0};
 
 	void packCommonTypeHeader(QByteArray& buf);
 	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
-	uint32_t packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr); // RPC NDR [MS-RPCE 2.2.6.2]
+	uint32_t packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset); // RPC NDR [MS-RPCE 2.2.6.2]
 	int32_t packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode);
 
-	qint32 unpackCommonTypeHeader(int size, QDataStream& buf);
-	qint32 unpackPrivateTypeHeader(int size, QDataStream& buf);
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
 	uint32_t unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index);
 	int32_t unpackRedirScardHandle(RdpStreamBuffer& stream, REDIR_SCARDHANDLE& handle, uint32_t& index);
 
 	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr); // RPC NDR [MS-RPCE 2.2.6.2]
-	bool ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr);
+	bool ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr, quint32& offset);
 	uint32_t ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
 
 public:

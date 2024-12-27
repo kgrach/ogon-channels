@@ -259,7 +259,7 @@ qint32 smartcardIOControl_Call::unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf,
 	return SCARD_S_SUCCESS;
 }
 
-uint32_t smartcardIOControl_Call::packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr){
+uint32_t smartcardIOControl_Call::packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset){
  
 	//const quint32 
 	pbContextNdrPtr = 0x00020000 + index * 4;
@@ -267,12 +267,18 @@ uint32_t smartcardIOControl_Call::packRedirScardContext(QByteArray& buf, const R
 	if (context._cbContext != 0)
 	{
 		buf << context._cbContext;			/* cbContext (4 bytes) */
+		offset += sizeof(context._cbContext);
+		
 		buf << pbContextNdrPtr;			/* pbContextNdrPtr (4 bytes) */
-		++index;
+		offset += sizeof(pbContextNdrPtr);
+
+		++index;		
 	}
 	else {
 		quint64 zeroNDR = 0;
 		buf << zeroNDR;
+		pbContextNdrPtr = 0;
+		offset += sizeof(zeroNDR);
 	}
 	
 	return SCARD_S_SUCCESS;
@@ -284,18 +290,26 @@ int32_t smartcardIOControl_Call::packReaderState(QByteArray& buf, std::vector<Re
 	int32_t status = SCARD_E_NO_MEMORY;
 
 	buf << cReaders;
+	offset += sizeof(cReaders);
 	
 	status = ERROR_INVALID_DATA;
 	for (index = 0; index < cReaders; index++)
 	{
-		uint32_t ptr = UINT32_MAX;
+		quint32 ptr = UINT32_MAX;
 
-		ndrPointerWrite(buf, ptrIndex, 4, ptr); // 4 - любое значение больше 0
-		
+		ndrPointerWrite(buf, ptrIndex, 4, ptr, offset); // 4 - любое значение больше 0
+
 		buf << ppcReaders[index]._dwCurrentState; /* dwCurrentState (4 bytes) */
+		offset += sizeof(ppcReaders[index]._dwCurrentState);
+
 		buf << ppcReaders[index]._dwEventState;   /* dwEventState (4 bytes) */
+		offset += sizeof(ppcReaders[index]._dwEventState);
+
 		buf << ppcReaders[index]._cbAtr;          /* cbAtr (4 bytes) */
+		offset += sizeof(ppcReaders[index]._cbAtr);
+
 		buf.append(ppcReaders[index]._rgbAtr);     /* rgbAtr [0..36] (36 bytes) */
+		offset += ppcReaders[index]._rgbAtr.size();
 	}
 
 	for (index = 0; index < cReaders; index++)
@@ -416,7 +430,7 @@ bool smartcardIOControl_Call::ndrPointerRead(RdpStreamBuffer& stream, uint32_t& 
 	return true;
 }
 
-bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr)
+bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr, quint32& offset)
 {
 	ndrPtr = 0x20000 + index * 4;
 
@@ -424,28 +438,23 @@ bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, 
 	{
 		buf << ndrPtr; /* NdrPtr (4 bytes) */
 		++index;
+		offset += sizeof(ndrPtr);
 	}
 	else {
 		quint32 zeroNDR = 0;
 		buf << zeroNDR;
 		ndrPtr = 0;
+		offset += sizeof(zeroNDR);
 	}
 	return true;
 }
 
 uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode){
-	offset = 0;
+	
 	quint32 len = size;
 	quint32 dataLen = size * elementSize;
+	quint32 offsetNdr = 0;
 	QByteArray bufPadding;
-
-	// switch(_ioControlCode) {
-	// 	case SCARD_IOCTL_LISTREADERSW:
-	// 		len = len * 2;
-	// 		break;
-	// } 
-
-	
 
 	if (size == 0){
 		return SCARD_S_SUCCESS;
@@ -455,30 +464,20 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data,
 	{
 		case NDR_PTR_FULL:			
 			buf << len;
-			buf << offset;
+			buf << offsetNdr;
 			buf << len;
-			offset = sizeof(len) + sizeof(offset) + sizeof(len);
+			offset += sizeof(len) + sizeof(offsetNdr) + sizeof(len);
 			break;
 		case NDR_PTR_SIMPLE:
 			buf << len;
-			offset = sizeof(len);
+			offset += sizeof(len);
 			break;
 		case NDR_PTR_FIXED:
 			break;
 	}
 
-	// switch(_ioControlCode) {
-	// 	case SCARD_IOCTL_CONNECTW:
-	// 	case SCARD_IOCTL_GETSTATUSCHANGEW:
-	// 		len = len * 2;
-	// 		break;
-	// } 
-
-	// dataLen = len * elementSize;
-
 	if (data.data()) {
 		if(unicode){
-//			auto tmpSize = data.size();
 			QByteArray tmp((const char*) (data.utf16()), dataLen);
 			buf.append(tmp);			
 		} else {
@@ -486,13 +485,15 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data,
 		}
 	}
 	else {		
-		buf.append(dataLen, '0');
+		buf.append(dataLen, '0'); // заполним нулями
 	}
 	
+	offset +=  dataLen;
+
 	quint32 paddingSize = getPadding(bufPadding, dataLen, 4);
 	if(paddingSize){
 		buf.append(bufPadding);
-		_paddingSize += paddingSize;
+		offset += paddingSize;
 	}
 
 	return SCARD_S_SUCCESS;
@@ -530,6 +531,7 @@ EstablishContext_Call::EstablishContext_Call() {
 void EstablishContext_Call::setResponse(QByteArray& buf){
 	uint32_t index = 0;
 	quint32 objectBufferLength;
+	quint32 	ndrPtr = 0;
 	
 	RdpStreamBuffer rsb(buf);
 	rsb.sealLength(buf.size());
@@ -543,28 +545,23 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 		return;
 	}
 
-quint32 offset = 0; // пока не понятно как парсить 4 байта перед контекстом. Значение всегда 0x08000000 - похоже на размер контекста
 	rsb >> _response._returnCode;
-	// rsb >> offset;
-	// rsb >> _response._hContext._cbContext;
 	auto rv = unpackRedirScardContext(rsb, _response._hContext, index);
 	if(rv != _response._returnCode){
 		_response._returnCode = rv;
 	}
-	rsb >> offset;
+	
+	ndrPointerRead(rsb, index, &ndrPtr);
 
 	auto startContext = rsb.pointer();
-	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hContext._cbContext) - sizeof(offset);
+	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hContext._cbContext) - sizeof(ndrPtr);
 	_response._hContext._pbContext = QByteArray(startContext, endContext); 
-	// _response._hContext._pbContextReverse = _response._hContext._pbContext;
-	// std::reverse(_response._hContext._pbContextReverse.begin(), _response._hContext._pbContextReverse.end());
 }
 
 //==================================== ListReaders_Call =============================================
 // MS-RDPESC 2.2.2.4
 ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerName, quint32 ioControlCode) {
 	uint32_t 	index = 0;
-	quint32 	offset = 0; 
 	quint32 	objectBufferLength = 0;
 	QByteArray 	padding;
 	quint32 	pbContextNdrPtr = 0x00020000;
@@ -588,28 +585,31 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerNa
 	_fmszReadersIsNULL = 0;
 	_ccReaders = SCARD_AUTOALLOCATE;	
 
-	packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr);
+	packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr, objectBufferLength);
 	
 	tmpInputBuffer << _cBytes;
-	ndrPointerWrite(tmpInputBuffer, index, 4, mszGroupsNdrPtr); // 4 - любое значение больше 0
+	objectBufferLength += sizeof(_cBytes);
+
+	ndrPointerWrite(tmpInputBuffer, index, 4, mszGroupsNdrPtr, objectBufferLength); // 4 - любое значение больше 0
+	
 	tmpInputBuffer << _fmszReadersIsNULL;
+	objectBufferLength += sizeof(_fmszReadersIsNULL);
+
 	tmpInputBuffer << _ccReaders;
+	objectBufferLength += sizeof(_ccReaders);
+
 	tmpInputBuffer << _hContext._cbContext;
 	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hContext._cbContext) + _hContext._pbContext.size();
+	
 	if (mszGroupsNdrPtr){
 		if(_ioControlCode == SCARD_IOCTL_LISTREADERSW){
-			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes , 1, NDR_PTR_SIMPLE, offset, true);
+			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes , 1, NDR_PTR_SIMPLE, objectBufferLength, true);
 		} else {
-			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes, 1, NDR_PTR_SIMPLE, offset, false);
+			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes, 1, NDR_PTR_SIMPLE, objectBufferLength, false);
 		}
 	}
 
-	objectBufferLength = sizeof(pbContextNdrPtr) /* 4 байт - размер pbContextNdrPtr (см. метод packRedirScardContext) */ + sizeof(_cBytes) + sizeof(mszGroupsNdrPtr) + sizeof(_fmszReadersIsNULL) 
-								+ sizeof(_ccReaders) + sizeof(_hContext._cbContext) + _hContext._pbContext.size() + _cBytes /* размер _mszGroups */
-								+ offset 
-								+ OFFSET
-								+ _paddingSize
-								;
 	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
 				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
 				+ objectBufferLength);
@@ -663,9 +663,7 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	quint32 	ndrPtr = 0;
 	quint32 	pbContextNdrPtr = 0x00020000;
 	uint32_t 	status = SCARD_S_SUCCESS;
-	quint32 	szReaderSize = 0; 
 	QByteArray 	tmpInputBuffer;
-	quint32 	offset = 0;
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
@@ -673,43 +671,37 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	_hContext._cbContext = sizeof(hContext); // 8 байт
 	_hContext._pbContext << hContext;
 
-	_szReader = QByteArray(szReader.c_str(), szReader.size() /* + 1 */);
-	szReaderSize = _szReader.size();
+	_szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
+
 	_dwShareMode = dwShareMode;
 	_dwPreferredProtocols = dwPreferredProtocols;
 
-	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr)) { // 4 - любое значение больше 0
+	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength)) { // 4 - любое значение больше 0
 		CWLOG_WRN(TAG, "packRedirScardContext fail. Error: 0x%08" PRIX32 "", status);
 	}
 
-	status = packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr);
+	status = packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr, objectBufferLength);
 	if( status!= SCARD_S_SUCCESS ){
 		CWLOG_WRN(TAG, "packRedirScardContext fail");
 	}
 	tmpInputBuffer << _dwShareMode;
+	objectBufferLength += sizeof(_dwShareMode);
+
 	tmpInputBuffer << _dwPreferredProtocols;
+	objectBufferLength += sizeof(_dwPreferredProtocols);
 	
 	if (ndrPtr){
 		if(_ioControlCode == SCARD_IOCTL_CONNECTW){			
-			ndrWrite(tmpInputBuffer, _szReader, szReaderSize, sizeof(WCHAR), NDR_PTR_FULL, offset, true); 
+			ndrWrite(tmpInputBuffer, _szReader, _szReader.size(), sizeof(WCHAR), NDR_PTR_FULL, objectBufferLength, true); 
 		} else {
-			ndrWrite(tmpInputBuffer, _szReader, szReaderSize, sizeof(CHAR), NDR_PTR_FULL, offset, false);
+			ndrWrite(tmpInputBuffer, _szReader, _szReader.size(), sizeof(CHAR), NDR_PTR_FULL, objectBufferLength, false);
 		}
-	}
-
-	if(_ioControlCode == SCARD_IOCTL_CONNECTW){	
-		szReaderSize = szReaderSize * 2;	
 	}
 
 	tmpInputBuffer << _hContext._cbContext;
 	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hContext._cbContext) + _hContext._pbContext.size();
 
-	objectBufferLength = sizeof(pbContextNdrPtr) /* 4 байт - размер pbContextNdrPtr (см. метод packRedirScardContext) */ + sizeof(ndrPtr) + sizeof(_dwShareMode) 
-								+ sizeof(_dwPreferredProtocols) + sizeof(_hContext._cbContext) + _hContext._pbContext.size() + szReaderSize 
-								+ offset
-								// + OFFSET
-								+ _paddingSize
-								;
 	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
 				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
 				+ objectBufferLength);
@@ -717,7 +709,7 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	packCommonTypeHeader(_inputBuffer);	
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);
-//	_inputBuffer.append(padding); 	
+	_inputBuffer.append(padding); 	
 
 	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
 }
@@ -778,9 +770,7 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 	quint32 	ndrPtr = 0;
 	quint32 	pbContextNdrPtr = 0x00020000;
 	uint32_t 	status = SCARD_S_SUCCESS;
-	quint32 	szReaderSize = 0; 
 	QByteArray 	tmpInputBuffer;
-	quint32 	offset = 0;
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
@@ -794,67 +784,47 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 		
 		ReaderState state;
 		state._szReader = QByteArray(rgReaderStates[i].szReader.c_str(), rgReaderStates[i].szReader.size() + 1);
-auto sizeReader = state._szReader.size(); 		
+
       	state._dwCurrentState = rgReaderStates[i].dwCurrentState;
       	state._dwEventState = rgReaderStates[i].dwEventState;
       	state._cbAtr = rgReaderStates[i].rgbAtr.length();
 		state._rgbAtr.append(rgReaderStates[i].rgbAtr.c_str());
 
-		if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){
-			objectBufferLength += state._szReader.size() * 2;
-		}
-		else {
-			objectBufferLength += state._szReader.size();
-		}
-
-		objectBufferLength += sizeof(state._dwCurrentState);
-
-		objectBufferLength += sizeof(state._dwEventState);
-
-		objectBufferLength += sizeof(state._cbAtr);
-
-		objectBufferLength += state._rgbAtr.size();
-		
-		objectBufferLength += OFFSET * 2; // не понятно почему не хватает этих байт
-
 		_rgReaderStates.push_back(state);
 	}
 
-	packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr);
-	tmpInputBuffer << _dwTimeOut;
-	tmpInputBuffer << _cReaders;
+	packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr, objectBufferLength);
 
-	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr)) { // 4 - любое значение больше 0
+	tmpInputBuffer << _dwTimeOut;
+	objectBufferLength += sizeof(_dwTimeOut);
+
+	tmpInputBuffer << _cReaders;
+	objectBufferLength += sizeof(_cReaders);
+
+	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength)) { // 4 - любое значение больше 0
 		CWLOG_WRN(TAG, "ndrPointerWrite fail. Error: 0x%08" PRIX32 "", status);
 	}
 
 	tmpInputBuffer << _hContext._cbContext;
 	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hContext._cbContext) + _hContext._pbContext.size();
 
 	if (ndrPtr){
 		if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){			
-			packReaderState(tmpInputBuffer, _rgReaderStates, _cReaders, index, offset, true);
+			packReaderState(tmpInputBuffer, _rgReaderStates, _cReaders, index, objectBufferLength, true);
 		} else {
-			packReaderState(tmpInputBuffer, _rgReaderStates, _cReaders, index, offset, false);
+			packReaderState(tmpInputBuffer, _rgReaderStates, _cReaders, index, objectBufferLength, false);
 		}
 	}	
 
-	objectBufferLength += sizeof(pbContextNdrPtr) /* 4 байт - размер pbContextNdrPtr (см. метод packRedirScardContext) */ + sizeof(ndrPtr) + sizeof(_dwTimeOut) 
-								+ sizeof(_cReaders) + sizeof(_hContext._cbContext) + _hContext._pbContext.size()  
-								+ offset
-								// + OFFSET
-								+ _paddingSize
-								;
 	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
 				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
-				+ objectBufferLength);
+				+ objectBufferLength); 
 
 	packCommonTypeHeader(_inputBuffer);	
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);
-	// _inputBuffer.append(padding); 
-	
-	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+	_inputBuffer.append(padding); 
 }
 
 void GetStatusChange_Call::setResponse(QByteArray& buf){
