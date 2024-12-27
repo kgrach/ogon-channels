@@ -300,7 +300,11 @@ int32_t smartcardIOControl_Call::packReaderState(QByteArray& buf, std::vector<Re
 
 	for (index = 0; index < cReaders; index++)
 	{
-		status = ndrWrite(buf, ppcReaders[index]._szReader.data(), ppcReaders[index]._szReader.size(), 1, NDR_PTR_FULL, offset, unicode);		
+		if(unicode){
+			status = ndrWrite(buf, ppcReaders[index]._szReader.data(), ppcReaders[index]._szReader.size(), sizeof(WCHAR), NDR_PTR_FULL, offset, unicode);		
+		} else {
+			status = ndrWrite(buf, ppcReaders[index]._szReader.data(), ppcReaders[index]._szReader.size(), sizeof(CHAR), NDR_PTR_FULL, offset, unicode);		
+		}
 	}
 
 	return status;
@@ -418,7 +422,7 @@ bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, 
 
 	if (length > 0)
 	{
-		buf << ndrPtr; /* mszGroupsNdrPtr (4 bytes) */
+		buf << ndrPtr; /* NdrPtr (4 bytes) */
 		++index;
 	}
 	else {
@@ -431,9 +435,17 @@ bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, 
 
 uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode){
 	offset = 0;
-	const quint32 len = size;
-	const quint32 dataLen = size * elementSize;
+	quint32 len = size;
+	quint32 dataLen = size * elementSize;
 	QByteArray bufPadding;
+
+	// switch(_ioControlCode) {
+	// 	case SCARD_IOCTL_LISTREADERSW:
+	// 		len = len * 2;
+	// 		break;
+	// } 
+
+	
 
 	if (size == 0){
 		return SCARD_S_SUCCESS;
@@ -455,20 +467,29 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data,
 			break;
 	}
 
+	// switch(_ioControlCode) {
+	// 	case SCARD_IOCTL_CONNECTW:
+	// 	case SCARD_IOCTL_GETSTATUSCHANGEW:
+	// 		len = len * 2;
+	// 		break;
+	// } 
+
+	// dataLen = len * elementSize;
+
 	if (data.data()) {
 		if(unicode){
-			auto tmpSize = data.size();
-			QByteArray tmp((const char*) (data.utf16()), data.size() * 2);
+//			auto tmpSize = data.size();
+			QByteArray tmp((const char*) (data.utf16()), dataLen);
 			buf.append(tmp);			
 		} else {
-			buf.append(data);
+			buf.append(data.toStdString().c_str(), dataLen);
 		}
 	}
 	else {		
 		buf.append(dataLen, '0');
 	}
 	
-	quint32 paddingSize = getPadding(bufPadding, len, 4);
+	quint32 paddingSize = getPadding(bufPadding, dataLen, 4);
 	if(paddingSize){
 		buf.append(bufPadding);
 		_paddingSize += paddingSize;
@@ -577,7 +598,7 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerNa
 	tmpInputBuffer << hContext; 
 	if (mszGroupsNdrPtr){
 		if(_ioControlCode == SCARD_IOCTL_LISTREADERSW){
-			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes, 1, NDR_PTR_SIMPLE, offset, true);
+			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes , 1, NDR_PTR_SIMPLE, offset, true);
 		} else {
 			ndrWrite(tmpInputBuffer, _mszGroups, _cBytes, 1, NDR_PTR_SIMPLE, offset, false);
 		}
@@ -652,14 +673,10 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	_hContext._cbContext = sizeof(hContext); // 8 байт
 	_hContext._pbContext << hContext;
 
-	_szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
+	_szReader = QByteArray(szReader.c_str(), szReader.size() /* + 1 */);
 	szReaderSize = _szReader.size();
 	_dwShareMode = dwShareMode;
 	_dwPreferredProtocols = dwPreferredProtocols;
-
-	if(_ioControlCode == SCARD_IOCTL_CONNECTW){	
-		szReaderSize = szReaderSize * 2;	
-	}
 
 	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr)) { // 4 - любое значение больше 0
 		CWLOG_WRN(TAG, "packRedirScardContext fail. Error: 0x%08" PRIX32 "", status);
@@ -674,11 +691,14 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	
 	if (ndrPtr){
 		if(_ioControlCode == SCARD_IOCTL_CONNECTW){			
-			ndrWrite(tmpInputBuffer, _szReader, _szReader.size(), 1, NDR_PTR_FULL, offset, true); 
+			ndrWrite(tmpInputBuffer, _szReader, szReaderSize, sizeof(WCHAR), NDR_PTR_FULL, offset, true); 
 		} else {
-
-			ndrWrite(tmpInputBuffer, _szReader, _szReader.size(), 1, NDR_PTR_FULL, offset, false);
+			ndrWrite(tmpInputBuffer, _szReader, szReaderSize, sizeof(CHAR), NDR_PTR_FULL, offset, false);
 		}
+	}
+
+	if(_ioControlCode == SCARD_IOCTL_CONNECTW){	
+		szReaderSize = szReaderSize * 2;	
 	}
 
 	tmpInputBuffer << _hContext._cbContext;
@@ -697,7 +717,7 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	packCommonTypeHeader(_inputBuffer);	
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);
-	// _inputBuffer.append(padding); 	
+//	_inputBuffer.append(padding); 	
 
 	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
 }
@@ -774,6 +794,7 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 		
 		ReaderState state;
 		state._szReader = QByteArray(rgReaderStates[i].szReader.c_str(), rgReaderStates[i].szReader.size() + 1);
+auto sizeReader = state._szReader.size(); 		
       	state._dwCurrentState = rgReaderStates[i].dwCurrentState;
       	state._dwEventState = rgReaderStates[i].dwEventState;
       	state._cbAtr = rgReaderStates[i].rgbAtr.length();
@@ -793,13 +814,9 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 		objectBufferLength += sizeof(state._cbAtr);
 
 		objectBufferLength += state._rgbAtr.size();
-		// if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){
-		// 	objectBufferLength += (state._rgbAtr.size() + 1) * 2;
-		// }
-		// else {
-		// 	objectBufferLength += state._rgbAtr.size() + 1;
-		// }
 		
+		objectBufferLength += OFFSET * 2; // не понятно почему не хватает этих байт
+
 		_rgReaderStates.push_back(state);
 	}
 
@@ -835,7 +852,7 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 	packCommonTypeHeader(_inputBuffer);	
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);
-	_inputBuffer.append(padding); 
+	// _inputBuffer.append(padding); 
 	
 	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
 }
