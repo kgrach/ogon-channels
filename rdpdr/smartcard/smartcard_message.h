@@ -62,16 +62,21 @@ public:
 	ReaderState();
 }; 
 
-struct ReaderState_Return
+class ReaderState_Return
 {
+public:	
 	quint32 _dwCurrentState;
 	quint32 _dwEventState;
 	/* [range] */ quint32 _cbAtr;
 	QByteArray _rgbAtr; // [36]
+
+	ReaderState_Return();
+	quint32 getSize() const {return sizeof(_dwCurrentState) + sizeof(_dwEventState) + sizeof(_cbAtr) + _rgbAtr.size();}
 };
 
-struct GetStatusChange_Return
+class GetStatusChange_Return
 {
+public:	
 	qint32 		_returnCode;
 	quint32 	_cReaders{0};
 	std::vector<ReaderState_Return> _rgReaderStates;

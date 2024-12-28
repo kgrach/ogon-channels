@@ -89,12 +89,16 @@ protected:
 
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
+
 	uint32_t unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index);
 	int32_t unpackRedirScardHandle(RdpStreamBuffer& stream, REDIR_SCARDHANDLE& handle, uint32_t& index);
+	int32_t unpackGetStatusChangeReturn(RdpStreamBuffer& stream, GetStatusChange_Return& ret, bool unicode);
 
-	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr); // RPC NDR [MS-RPCE 2.2.6.2]
+	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32& ptr); // RPC NDR [MS-RPCE 2.2.6.2]
 	bool ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr, quint32& offset);
+	
 	uint32_t ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
+	uint32_t ndrRead(RdpStreamBuffer& stream, QByteArray& data, size_t min, size_t elementSize, ndr_ptr_t type);
 
 public:
 	virtual ~smartcardIOControl_Call() noexcept = default;
@@ -105,6 +109,10 @@ public:
 	* 	alignment - выравнивание для padding'а
 	*/
 	quint32 getPadding(QByteArray& bufPadding, quint32 size, quint32 alignment = 8);
+
+	/* unpackReadSizeAlign - сдвинет указатель потока на значение наполнителя и вернет это значение */
+	quint32 unpackReadSizeAlign(RdpStreamBuffer& stream, size_t size, quint32 alignment = 8);
+
 	const char* getIOctlString(bool funcName); // вернет строковое название ioControlCode
 
 	virtual quint32 getIoControlCode() { return _ioControlCode; }
@@ -204,7 +212,8 @@ public:
 
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
-	const QByteArray& getReturnReply(/*quint32 num*/) const override {/*return _response._rgReaderStates[num]._rgbAtr;*/}
+	const QByteArray& getReturnReply() const override {/*return _response._rgReaderStates[num]._rgbAtr;*/}
+	const std::vector<ReaderState_Return>& getGetStatusChange_Return() const {return _response._rgReaderStates;}
 };
 
 

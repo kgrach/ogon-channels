@@ -228,16 +228,6 @@ public:
   }
 
 void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
-    
-    // std::vector<SCARD_READERSTATE> inReaderStates(cReaders);
-
-    // for (int i = 0; i < cReaders; i++) {
-    //   inReaderStates[i].szReader = rgReaderStates[i].szReader.c_str();
-    //   inReaderStates[i].dwCurrentState = rgReaderStates[i].dwCurrentState;
-    // }
-
-    // LONG rv = SCardGetStatusChange(hContext, dwTimeout, inReaderStates.data(), cReaders);
-
 // временно для отладки
 // std::vector<scard_readerstate_rpc> rgReaderStates___(2);
 // const char* str0 = "\\\\?PnP?\\Notification\0";
@@ -252,14 +242,13 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
 
     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
 
-    // for (int i = 0; i < cReaders; i++) {
-    //   outReaderStates[i].dwEventState = inReaderStates[i].dwEventState;
-    //   outReaderStates[i].rgbAtr = std::string((char*)inReaderStates[i].rgbAtr, inReaderStates[i].cbAtr);
-    // }
-
-    // _return.retValue = rv;
-    // _return.rgReaderStates = outReaderStates;
-
+    auto ret = getStatusChange_Call->getGetStatusChange_Return();
+    if(getStatusChange_Call->getReturnCode() == SCARD_S_SUCCESS){
+      for (int i = 0; i < cReaders; i++) {
+        outReaderStates[i].dwEventState = ret[i]._dwEventState;
+        outReaderStates[i].rgbAtr = std::string((char*)ret[i]._rgbAtr.data(), ret[i]._cbAtr);
+      }
+    }
     _return.retValue = getStatusChange_Call->getReturnCode();
     _return.rgReaderStates = outReaderStates;
 

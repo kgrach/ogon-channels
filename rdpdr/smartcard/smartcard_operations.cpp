@@ -173,6 +173,22 @@ quint32 smartcardIOControl_Call::getPadding(QByteArray& bufPadding, quint32 size
 	return pad;
 }
 
+quint32 smartcardIOControl_Call::unpackReadSizeAlign(RdpStreamBuffer& stream, size_t size, quint32 alignment)
+{
+ 
+	quint32 pad;
+	
+	pad = size;
+	size = (size + alignment - 1) & ~(alignment - 1);
+	pad = size - pad;
+
+	if (pad){
+		stream >> pad;
+	}
+
+	return pad;
+}
+
 void smartcardIOControl_Call::packCommonTypeHeader(QByteArray& buf){
 	/* See MS-RPCE */
 	quint8 version = 1; 			/* Version (1 byte) */
@@ -352,7 +368,7 @@ uint32_t smartcardIOControl_Call::unpackRedirScardContext(RdpStreamBuffer& strea
 		return STATUS_INVALID_PARAMETER;
 	}
 
-	if (!ndrPointerRead(stream, index, &pbContextNdrPtr)){
+	if (!ndrPointerRead(stream, index, pbContextNdrPtr)){
   
 		return ERROR_INVALID_DATA;
     }
@@ -397,13 +413,53 @@ int32_t smartcardIOControl_Call::unpackRedirScardHandle(RdpStreamBuffer& stream,
 		return STATUS_BUFFER_TOO_SMALL;
 	}
 
-	if(!ndrPointerRead(stream, index, &pbHandleNdrPtr)){ 
+	if(!ndrPointerRead(stream, index, pbHandleNdrPtr)){ 
 		return ERROR_INVALID_DATA;
     }
 	return SCARD_S_SUCCESS;
 }
 
-bool smartcardIOControl_Call::ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32* ptr){
+int32_t smartcardIOControl_Call::unpackGetStatusChangeReturn(RdpStreamBuffer& stream, GetStatusChange_Return& ret, bool unicode) {
+
+	int32_t status;
+	quint32 cReaders = 0;
+	uint32_t index = 0;
+	quint32 ndrPtr = 0;
+	quint32 len = 0;
+
+
+	stream >> ret._returnCode;
+
+	stream >> ret._cReaders;
+
+	ndrPointerRead(stream, index, ndrPtr);
+
+	stream >> len;
+
+	auto expectedLength = len * (sizeof(ReaderState_Return::_dwCurrentState) 
+											+ sizeof(ReaderState_Return::_dwEventState)
+											+ sizeof(ReaderState_Return::_cbAtr)
+											+ 36);
+	if (stream.remainingLength() < expectedLength){
+		CWLOG_WRN(TAG, "SCARDHANDLE is too short: Actual: %" PRIuz ", Expected: %" PRIu32 "",
+		          stream.remainingLength(), expectedLength);
+		ret._returnCode = STATUS_BUFFER_TOO_SMALL;
+		return ret._returnCode;
+	}
+
+	for(size_t i = 0; i < ret._cReaders; ++i){
+		ReaderState_Return state;
+		stream >> state._dwCurrentState;
+		stream >> state._dwEventState;
+		stream >> state._cbAtr;
+		state._rgbAtr = QByteArray(stream.pointer(), 36);
+		ret._rgReaderStates.push_back(state);
+	}
+
+	return ret._returnCode;
+}
+
+bool smartcardIOControl_Call::ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32& ptr){
  
 	const uint32_t expect = 0x20000 + index * 4;
 	quint32 ndrPtr;
@@ -413,8 +469,8 @@ bool smartcardIOControl_Call::ndrPointerRead(RdpStreamBuffer& stream, uint32_t& 
     }
 
 	stream >> ndrPtr; /* 4 bytes */
-	if (ptr)
-		*ptr = ndrPtr;
+	ptr = ndrPtr;
+
 	if (expect != ndrPtr)
 	{
 		/* Allow NULL pointer if we read the result */
@@ -499,6 +555,97 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data,
 	return SCARD_S_SUCCESS;
 }
 
+uint32_t smartcardIOControl_Call::ndrRead(RdpStreamBuffer& stream, QByteArray& data, size_t min, size_t elementSize, ndr_ptr_t type)
+{
+	quint32 len, offset, len2;
+	size_t required;
+
+	switch (type)
+	{
+		case NDR_PTR_FULL:
+			required = 12;
+			break;
+		case NDR_PTR_SIMPLE:
+			required = 4;
+			break;
+		case NDR_PTR_FIXED:
+			required = min;
+			break;
+	}
+
+	if (stream.remainingLength() < required)
+	{
+		CWLOG_ERR(TAG, "Short data while trying to read NDR, expected %d, got %" PRIu64, required, stream.remainingLength());
+        
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+
+	switch (type)
+	{
+		case NDR_PTR_FULL:
+			stream >> len;
+			stream >> offset;
+			stream >> len2;
+			
+			if (len != offset + len2)
+			{
+				CWLOG_ERR(TAG,
+				         "Invalid data when reading full NDR pointer: total=%" PRIu32
+				         ", offset=%" PRIu32 ", remaining=%" PRIu32,
+				         len, offset, len2);
+                
+				return STATUS_BUFFER_TOO_SMALL;
+			}
+			break;
+		case NDR_PTR_SIMPLE:
+			stream >> len;
+
+			if ((len != min) && (min > 0))
+			{
+				CWLOG_ERR(TAG,
+				         "Invalid data when reading simple NDR pointer: total=%" PRIu32
+				         ", expected=%" PRIu32,
+				         len, min);
+                
+				return STATUS_BUFFER_TOO_SMALL;
+			}
+			break;
+		case NDR_PTR_FIXED:
+			len = (quint32)min;
+			break;
+	}
+
+	if (min > len)
+	{
+		CWLOG_ERR(TAG, "Invalid length read from NDR pointer, minimum %" PRIu32 ", got %" PRIu32,
+		         min, len);
+
+		return STATUS_DATA_ERROR;
+	}
+
+	if (len > SIZE_MAX / 2){
+		return STATUS_BUFFER_TOO_SMALL;
+    }
+
+	if (stream.remainingLength() / elementSize < len)
+	{
+		CWLOG_ERR(TAG,
+		         "Short data while trying to read data from NDR pointer, expected %" PRIu32
+		         ", got %" PRIu32,
+		         len, stream.remainingLength());
+        
+		return STATUS_BUFFER_TOO_SMALL;
+	}
+	len *= elementSize;
+
+	data = QByteArray(stream.pointer(), len); 
+auto dataSize = data.size();
+
+	unpackReadSizeAlign(stream, len, 4);
+
+	return STATUS_SUCCESS;
+}
+
 //========================================================================================================
 //========================================================================================================
 
@@ -538,10 +685,12 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 
 	qint32 res = unpackCommonTypeHeader(rsb);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 
@@ -551,7 +700,7 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 		_response._returnCode = rv;
 	}
 	
-	ndrPointerRead(rsb, index, &ndrPtr);
+	ndrPointerRead(rsb, index, ndrPtr);
 
 	auto startContext = rsb.pointer();
 	auto endContext = objectBufferLength - sizeof(_response._returnCode) - sizeof(_response._hContext._cbContext) - sizeof(ndrPtr);
@@ -629,10 +778,12 @@ void ListReaders_Call::setResponse(QByteArray& buf){
 
 	qint32 res = unpackCommonTypeHeader(rsb);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 
@@ -724,10 +875,12 @@ void Connect_Call::setResponse(QByteArray& buf){
 
 	qint32 res = unpackCommonTypeHeader(rsb);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
 	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
 		return;
 	}
 
@@ -828,5 +981,27 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 }
 
 void GetStatusChange_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength = 0;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
 
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	if(_ioControlCode == SCARD_IOCTL_GETSTATUSCHANGEW){
+		unpackGetStatusChangeReturn(rsb, _response, true);
+	} else {
+		unpackGetStatusChangeReturn(rsb, _response, false);
+	}	
 }
