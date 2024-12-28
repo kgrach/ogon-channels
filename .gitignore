@@ -8,3 +8,4 @@ nbproject/
 moc_*.cpp
 *.pc
 *.so*
+build/
