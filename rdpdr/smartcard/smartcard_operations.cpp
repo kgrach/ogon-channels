@@ -439,7 +439,7 @@ int32_t smartcardIOControl_Call::unpackGetStatusChangeReturn(RdpStreamBuffer& st
 	auto expectedLength = len * (sizeof(ReaderState_Return::_dwCurrentState) 
 											+ sizeof(ReaderState_Return::_dwEventState)
 											+ sizeof(ReaderState_Return::_cbAtr)
-											+ 36);
+											+ 36); // размер _rgbAtr = 36 байт
 	if (stream.remainingLength() < expectedLength){
 		CWLOG_WRN(TAG, "SCARDHANDLE is too short: Actual: %" PRIuz ", Expected: %" PRIu32 "",
 		          stream.remainingLength(), expectedLength);
@@ -454,6 +454,7 @@ int32_t smartcardIOControl_Call::unpackGetStatusChangeReturn(RdpStreamBuffer& st
 		stream >> state._cbAtr;
 		state._rgbAtr = QByteArray(stream.pointer(), 36);
 		ret._rgReaderStates.push_back(state);
+		stream.seek(36); // размер _rgbAtr = 36 байт. Сдвинули на 36 байт
 	}
 
 	return ret._returnCode;
