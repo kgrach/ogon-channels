@@ -85,6 +85,7 @@ protected:
 	void packCommonTypeHeader(QByteArray& buf);
 	void packPrivateTypeHeader(QByteArray& buf, quint32 objectBufferLength);
 	uint32_t packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset); // RPC NDR [MS-RPCE 2.2.6.2]
+	uint32_t packRedirScardHandle(QByteArray& buf, const REDIR_SCARDHANDLE& handle, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset);
 	int32_t packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode);
 
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
@@ -132,7 +133,7 @@ public:
 	virtual ~ScardAccessStartedEvent_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override {}
 	qint64 getReturnCode() const override {return 0; }
-	const QByteArray& getReturnReply() const override {}
+	const QByteArray& getReturnReply() const override { return QByteArray();}
 //	const QByteArray& getReturnReverseContext() const override {}
 };
 
@@ -212,8 +213,27 @@ public:
 
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
-	const QByteArray& getReturnReply() const override {/*return _response._rgReaderStates[num]._rgbAtr;*/}
+	const QByteArray& getReturnReply() const override {return QByteArray();}
 	const std::vector<ReaderState_Return>& getGetStatusChange_Return() const {return _response._rgReaderStates;}
 };
 
+class Status_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDHANDLE 	_hCard;
+	quint32	 			_fmszReaderNamesIsNULL;
+	quint32 			_cchReaderLen;
+	quint32 			_cbAtrLen;
 
+	Status_Return		_response;
+
+public:
+	Status_Call(quint64 hCard, quint64 hContext, int64_t cchReaderLen, int64_t cbAtrLen, quint32 ioControlCode = SCARD_IOCTL_STATUSA);
+	virtual ~Status_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	qint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._pbAtr;}
+	const QByteArray& getReaderNames() const {return _response._mszReaderNames;}
+	quint32 getDwState() {return _response._dwState;}
+	quint32 getDwProtocol() {return _response._dwProtocol;}
+};

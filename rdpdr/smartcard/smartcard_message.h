@@ -9,6 +9,9 @@
 
 #include <vector>
 
+#define PB_ATR_LEN 	32 	// see Status_Return
+#define RGB_ATR_LEN 36 	// see ReaderState_Common_Call [MS-RDPESC] 2.2.1.5
+
 struct REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
 {	
 	quint32 	_cbContext; 			// The number of bytes in the _pbContext
@@ -18,8 +21,8 @@ struct REDIR_SCARDCONTEXT // MS-RDPESC 2.2.1.1
 struct REDIR_SCARDHANDLE
 {
 	REDIR_SCARDCONTEXT _Context;
-	quint32 	_cbHandle;
-	QByteArray 	_pbHandle;
+	quint32 	_cbHandle; 		// The number of bytes in the pbHandle field
+	QByteArray 	_pbHandle;		// An array of cbHandle bytes that corresponds to a smart card reader handle on the TS client
 };
 
 struct Long_Return
@@ -81,3 +84,15 @@ public:
 	quint32 	_cReaders{0};
 	std::vector<ReaderState_Return> _rgReaderStates;
 }; 
+
+class Status_Return {
+public:	
+	qint32 		_returnCode;
+	quint32 	_cBytes;
+	QByteArray 	_mszReaderNames;
+	quint32 	_dwState;
+	quint32 	_dwProtocol;
+	QByteArray 	_pbAtr; // 32
+	quint32 	_cbAtrLen;
+	Status_Return();
+};

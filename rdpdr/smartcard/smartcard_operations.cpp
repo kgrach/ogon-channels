@@ -300,6 +300,30 @@ uint32_t smartcardIOControl_Call::packRedirScardContext(QByteArray& buf, const R
 	return SCARD_S_SUCCESS;
 }
 
+uint32_t smartcardIOControl_Call::packRedirScardHandle(QByteArray& buf, const REDIR_SCARDHANDLE& handle, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset)
+{
+	pbContextNdrPtr = 0x00020000 + index * 4;
+
+	if (handle._cbHandle != 0)
+	{
+		buf << handle._cbHandle;			/* cbHandle (4 bytes) */
+		offset += sizeof(handle._cbHandle);
+		
+		buf << pbContextNdrPtr;				/* pbContextNdrPtr (4 bytes) */
+		offset += sizeof(pbContextNdrPtr);
+
+		++index;		
+	}
+	else {
+		quint64 zeroNDR = 0;
+		buf << zeroNDR;
+		pbContextNdrPtr = 0;
+		offset += sizeof(zeroNDR);
+	}
+	
+	return SCARD_S_SUCCESS;
+}
+
 int32_t smartcardIOControl_Call::packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode)
 {
 	uint32_t index, len;
@@ -439,7 +463,7 @@ int32_t smartcardIOControl_Call::unpackGetStatusChangeReturn(RdpStreamBuffer& st
 	auto expectedLength = len * (sizeof(ReaderState_Return::_dwCurrentState) 
 											+ sizeof(ReaderState_Return::_dwEventState)
 											+ sizeof(ReaderState_Return::_cbAtr)
-											+ 36); // размер _rgbAtr = 36 байт
+											+ RGB_ATR_LEN); // размер _rgbAtr = 36 байт
 	if (stream.remainingLength() < expectedLength){
 		CWLOG_WRN(TAG, "SCARDHANDLE is too short: Actual: %" PRIuz ", Expected: %" PRIu32 "",
 		          stream.remainingLength(), expectedLength);
@@ -452,9 +476,9 @@ int32_t smartcardIOControl_Call::unpackGetStatusChangeReturn(RdpStreamBuffer& st
 		stream >> state._dwCurrentState;
 		stream >> state._dwEventState;
 		stream >> state._cbAtr;
-		state._rgbAtr = QByteArray(stream.pointer(), 36);
+		state._rgbAtr = QByteArray(stream.pointer(), RGB_ATR_LEN);
 		ret._rgReaderStates.push_back(state);
-		stream.seek(36); // размер _rgbAtr = 36 байт. Сдвинули на 36 байт
+		stream.seek(RGB_ATR_LEN); // размер _rgbAtr = 36 байт. Сдвинули на 36 байт
 	}
 
 	return ret._returnCode;
@@ -640,7 +664,7 @@ uint32_t smartcardIOControl_Call::ndrRead(RdpStreamBuffer& stream, QByteArray& d
 	len *= elementSize;
 
 	data = QByteArray(stream.pointer(), len); 
-auto dataSize = data.size();
+	stream.seek(len);
 
 	unpackReadSizeAlign(stream, len, 4);
 
@@ -1005,4 +1029,106 @@ void GetStatusChange_Call::setResponse(QByteArray& buf){
 	} else {
 		unpackGetStatusChangeReturn(rsb, _response, false);
 	}	
+}
+
+//==================================== Status_Call =============================================
+Status_Call::Status_Call(quint64 hCard, quint64 hContext, int64_t cchReaderLen, int64_t cbAtrLen, quint32 ioControlCode){
+
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	pbContextNdrPtr = 0x00020000;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_cchReaderLen = cchReaderLen;
+	_cbAtrLen = cbAtrLen;
+	_hCard._cbHandle = sizeof(hCard); // 8 байт
+	_hCard._pbHandle << hCard;
+	_hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_hCard._Context._pbContext << hContext;
+
+	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardContext fail");
+	}
+
+	status = packRedirScardHandle(tmpInputBuffer, _hCard, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardHandle fail");
+	}
+
+	tmpInputBuffer << _fmszReaderNamesIsNULL;
+	objectBufferLength += sizeof(_fmszReaderNamesIsNULL);
+
+	tmpInputBuffer << _cchReaderLen;
+	objectBufferLength += sizeof(_cchReaderLen);
+
+	tmpInputBuffer << _cbAtrLen;
+	objectBufferLength += sizeof(_cbAtrLen);
+
+	tmpInputBuffer << _hCard._Context._cbContext;
+	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hCard._Context._cbContext) + _hCard._Context._pbContext.size();
+
+	tmpInputBuffer << _hCard._cbHandle;
+	tmpInputBuffer << hCard; 
+	objectBufferLength += sizeof(_hCard._cbHandle) + _hCard._pbHandle.size();
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Status_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	// quint32 offset4 = 0;
+	// quint64 offset8 = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+
+	rsb >> _response._cBytes;
+
+	ndrPointerRead(rsb, index, ndrPtr);
+
+	rsb >> _response._dwState;
+
+	rsb >> _response._dwProtocol;
+
+	_response._pbAtr = QByteArray(rsb.pointer(), PB_ATR_LEN); 	// прочитали 32 байта
+	rsb.seek(PB_ATR_LEN); 										// сдвинули на 32 байта
+
+	rsb >> _response._cbAtrLen;
+
+	ndrRead(rsb, _response._mszReaderNames, _response._cBytes, 1, NDR_PTR_SIMPLE);
+
+	// if(_ioControlCode == SCARD_IOCTL_STATUSW) {
+	// 	// ndrRead(rsb, _response._mszReaderNames, _response._cBytes, 1, NDR_PTR_SIMPLE);
+	// 	ndrRead(rsb, _response._mszReaderNames, _response._cBytes, sizeof(WCHAR), NDR_PTR_SIMPLE);		
+	// }
+	// else {
+	// 	ndrRead(rsb, _response._mszReaderNames, _response._cBytes, sizeof(CHAR), NDR_PTR_SIMPLE);
+	// }
 }

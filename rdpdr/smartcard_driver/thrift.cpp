@@ -21,7 +21,7 @@ class ogonHandler : virtual public ogonIf {
   // This is code for current project only, it don't need into ogon
   // ------------- Begin -------------
   std::mutex mtx_;
-  std::map<SCARDHANDLE, SCARDCONTEXT> Card2Context_;
+  std::map<SCARDHANDLE_RPC, SCARDCONTEXT_RPC> Card2Context_;
   // -------------  End  -------------
 
 public:
@@ -35,19 +35,6 @@ public:
 
     const char* ctxt = establishContextCall->getReturnReply().data();
     long *hContext = (long*) ctxt;
-    // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnContext().size();
-    // const char* tmpCtxt = ctxt;
-    // long *hContext = new long [ctxtSize];
-    // bzero(hContext,  sizeof(long));
-    // memcpy(hContext, tmpCtxt, ctxtSize);
-
-    // с реверсом байтов
-    //  const char* ctxt = globalEstablishContextCall->getReturnReverseContext().data();
-    // auto ctxtSize = 4; //sizeof(long); //globalEstablishContextCall->getReturnContext().size();
-    // const char* tmpCtxt = ctxt + 4; // сдвинем на 4 байта (пропустим 0x00000000)
-    // long *c = new long [ctxtSize];
-    // bzero(hContext,  sizeof(long));
-    // memcpy(hContext, tmpCtxt, ctxtSize);
 
     _return.cardContext = *hContext;
     _return.retValue = establishContextCall->getReturnCode();
@@ -121,11 +108,8 @@ public:
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
 
-    // Your implementation goes here
-    SCARDHANDLE phCard;
-    DWORD pdwActiveProtocol;
-
-//    LONG rv = SCardConnect(hContext, szReader.c_str(), dwShareMode, dwPreferredProtocols, &phCard, &pdwActiveProtocol);
+    // SCARDHANDLE phCard;
+    // DWORD pdwActiveProtocol;
 
     std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTW);
     globalSmartCardOperationsThread->createHandle(connect_Call);
@@ -135,6 +119,9 @@ public:
     SCARDHANDLE_RPC* handle = (SCARDHANDLE_RPC*) chHandle; 
     _return.phCard = *handle;
     _return.pdwActiveProtocol = connect_Call->getActiveProtocol();
+
+    std::lock_guard<std::mutex> lock(mtx_);
+    Card2Context_[_return.phCard] = hContext;
   }
 
   void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {
@@ -172,72 +159,23 @@ public:
   }
 
   void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {
-    // Your implementation goes here
 
-    DWORD pdwState;
-    DWORD pdwProtocol;
+    std::lock_guard<std::mutex> lock(mtx_);
+    SCARDCONTEXT_RPC hContext = Card2Context_[hCard];
 
-    LPSTR szReaderName = NULL;
-    DWORD szReaderNameLen = pcchReaderLen;
+    std::shared_ptr<Status_Call> status_Call = std::make_shared<Status_Call>(hCard, hContext, pcchReaderLen, pcbAtrLen, SCARD_IOCTL_STATUSA);
+    globalSmartCardOperationsThread->createHandle(status_Call);
 
-    std::string readerBuf;
 
-    if(SCARD_AUTOALLOCATE != szReaderNameLen) {
-      readerBuf.resize(szReaderNameLen);
-      szReaderName = readerBuf.data();
-    }
-
-    LPBYTE pAtr = NULL;
-    DWORD AtrLen = pcbAtrLen;
-
-    std::string atrBuf;
-
-    if(SCARD_AUTOALLOCATE != AtrLen) {
-      atrBuf.resize(AtrLen);
-      pAtr = (unsigned char*)atrBuf.data();
-    }
-
-    printf("Server received SCardStatus: SCARDHANDLE=%ld\n", hCard);
-
-    LONG rv = SCardStatus(hCard, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen, 
-                                  &pdwState, &pdwProtocol, 
-                                 (atrBuf.empty() ? (LPBYTE)&pAtr : pAtr), &AtrLen);
-
-    _return.retValue = rv;
-    _return.szReaderName = std::string(szReaderName, szReaderNameLen);
-    _return.pdwState = pdwState;
-    _return.pdwProtocol = pdwProtocol;
-    _return.pbAtr = std::string((char*)pAtr, AtrLen);
-
-    printf ("SCardStatus return %ld\n", rv);
-
-    // This is code for current project only, it don't need into ogon
-    // ------------- Begin -------------
-    if(SCARD_AUTOALLOCATE == pcbAtrLen) {
-      std::lock_guard<std::mutex> lock(mtx_);
-      SCARDCONTEXT hContext = Card2Context_[hCard];
-      SCardFreeMemory(hContext, pAtr);
-    }
-
-    if(SCARD_AUTOALLOCATE == pcchReaderLen) {
-      std::lock_guard<std::mutex> lock(mtx_);
-      SCARDCONTEXT hContext = Card2Context_[hCard];
-      SCardFreeMemory(hContext, szReaderName);
-    }
-    // -------------  End  -------------
+    _return.retValue = status_Call->getReturnCode();
+    _return.szReaderName = std::string(status_Call->getReaderNames().data(), status_Call->getReaderNames().size());
+    _return.pdwState = status_Call->getDwState();
+    _return.pdwProtocol = status_Call->getDwProtocol();
+    _return.pbAtr = std::string(status_Call->getReturnReply().data(), status_Call->getReturnReply().size());
   }
 
 void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
-// временно для отладки
-// std::vector<scard_readerstate_rpc> rgReaderStates___(2);
-// const char* str0 = "\\\\?PnP?\\Notification\0";
-// rgReaderStates___[0].szReader = std::string(str0,21);
-// rgReaderStates___[0].dwCurrentState = SCARD_STATE_UNAWARE;
-
-// rgReaderStates___[1].szReader = "Aladdin R.D. JaCarta [SCR Interface] (000000000000) 00 00";
-// rgReaderStates___[1].dwCurrentState = SCARD_STATE_EMPTY;
-// std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates___, cReaders, SCARD_IOCTL_GETSTATUSCHANGEW);
-    std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEW);
+   std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
     globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
     std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
