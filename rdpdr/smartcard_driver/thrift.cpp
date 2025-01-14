@@ -38,7 +38,7 @@ public:
 
     _return.cardContext = *hContext;
     _return.retValue = establishContextCall->getReturnCode();
-}
+  }
 
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) {
     // Your implementation goes here
@@ -160,12 +160,14 @@ public:
 
   void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {
 
-    std::lock_guard<std::mutex> lock(mtx_);
-    SCARDCONTEXT_RPC hContext = Card2Context_[hCard];
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
 
     std::shared_ptr<Status_Call> status_Call = std::make_shared<Status_Call>(hCard, hContext, pcchReaderLen, pcbAtrLen, SCARD_IOCTL_STATUSA);
     globalSmartCardOperationsThread->createHandle(status_Call);
-
 
     _return.retValue = status_Call->getReturnCode();
     _return.szReaderName = std::string(status_Call->getReaderNames().data(), status_Call->getReaderNames().size());
@@ -174,26 +176,35 @@ public:
     _return.pbAtr = std::string(status_Call->getReturnReply().data(), status_Call->getReturnReply().size());
   }
 
-void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
-   std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
-    globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
+  void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
+      
+      std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(hContext, dwTimeout, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+      globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
 
-    std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
+      std::vector<scard_readerstate_rpc> outReaderStates(cReaders);
 
-    auto ret = getStatusChange_Call->getGetStatusChange_Return();
-    if(getStatusChange_Call->getReturnCode() == SCARD_S_SUCCESS){
-      for (int i = 0; i < cReaders; i++) {
-        outReaderStates[i].dwEventState = ret[i]._dwEventState;
-        outReaderStates[i].rgbAtr = std::string((char*)ret[i]._rgbAtr.data(), ret[i]._cbAtr);
+      auto ret = getStatusChange_Call->getGetStatusChange_Return();
+      if(getStatusChange_Call->getReturnCode() == SCARD_S_SUCCESS){
+        for (int i = 0; i < cReaders; i++) {
+          outReaderStates[i].dwEventState = ret[i]._dwEventState;
+          outReaderStates[i].rgbAtr = std::string((char*)ret[i]._rgbAtr.data(), ret[i]._cbAtr);
+        }
       }
-    }
-    _return.retValue = getStatusChange_Call->getReturnCode();
-    _return.rgReaderStates = outReaderStates;
-
-}
+      _return.retValue = getStatusChange_Call->getReturnCode();
+      _return.rgReaderStates = outReaderStates;
+  }
 
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) {
-    // Your implementation goes here
+    // pbSendBuffer = { 0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00 }
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
+
+    std::shared_ptr<Transmit_Call> transmit_Call = std::make_shared<Transmit_Call>(hCard, hContext, pioSendPci, pbSendBuffer, pcbRecvLength, SCARD_IOCTL_TRANSMIT);
+    globalSmartCardOperationsThread->createHandle(transmit_Call);
+
     printf("Transmit\n");
     SCARD_IO_REQUEST ioSendPci, ioRecvPci;
 
@@ -210,18 +221,16 @@ void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const
 
     printf("Server received SCardTransmit: SCARDHANDLE=%ld\n", hCard);
 
-    LONG rv = SCardTransmit(hCard, &ioSendPci, sendBuffer, sendBufferLength, &ioRecvPci, (unsigned char*)recv.data(), &recvBufferLength);
+//    LONG rv = SCardTransmit(hCard, &ioSendPci, sendBuffer, sendBufferLength, &ioRecvPci, (unsigned char*)recv.data(), &recvBufferLength);
 
     scard_io_request_rpc ioSendPciRPC;
 
     ioSendPciRPC.dwProtocol = ioRecvPci.dwProtocol;
     ioSendPciRPC.cbPciLength = ioRecvPci.cbPciLength;
 
-    _return.retValue = rv;
+    _return.retValue = transmit_Call->getReturnCode();;
     _return.pioRecvPci = ioSendPciRPC;
     _return.pbRecvBuffer = std::string(recv.data(), recvBufferLength);
-
-    printf ("SCardTransmit return %ld\n", rv);
   }
 
   LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {

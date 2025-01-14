@@ -101,9 +101,6 @@ protected:
 	uint32_t ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
 	uint32_t ndrRead(RdpStreamBuffer& stream, QByteArray& data, size_t min, size_t elementSize, ndr_ptr_t type);
 
-public:
-	virtual ~smartcardIOControl_Call() noexcept = default;
-
 	/*
 	*  getPadding - вернет размер наполнителя и заполнит нулями сам наполнитель 
 	* 	size - размер буфера в который нужно добавить наполнитель (Padding), например _inputBuffer
@@ -114,6 +111,9 @@ public:
 	/* unpackReadSizeAlign - сдвинет указатель потока на значение наполнителя и вернет это значение */
 	quint32 unpackReadSizeAlign(RdpStreamBuffer& stream, size_t size, quint32 alignment = 8);
 
+public:
+	virtual ~smartcardIOControl_Call() noexcept = default;
+
 	const char* getIOctlString(bool funcName); // вернет строковое название ioControlCode
 
 	virtual quint32 getIoControlCode() { return _ioControlCode; }
@@ -123,7 +123,6 @@ public:
 	virtual void setResponse(QByteArray& buf) = 0;
 	virtual qint64 getReturnCode() const = 0;
 	virtual const QByteArray& getReturnReply() const = 0;
-//	virtual const QByteArray& getReturnReverseContext() const = 0;
 };
 
 class ScardAccessStartedEvent_Call : public smartcardIOControl_Call
@@ -134,7 +133,6 @@ public:
 	void setResponse(QByteArray& buf) override {}
 	qint64 getReturnCode() const override {return 0; }
 	const QByteArray& getReturnReply() const override { return QByteArray();}
-//	const QByteArray& getReturnReverseContext() const override {}
 };
 
 class EstablishContext_Call : public smartcardIOControl_Call
@@ -154,7 +152,6 @@ public:
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._hContext._pbContext;}
-//	const QByteArray& getReturnReverseContext() const override {return _response._hContext._pbContextReverse;}
 };
 
 class ListReaders_Call :  public smartcardIOControl_Call {
@@ -179,8 +176,8 @@ public:
 
 class Connect_Call :  public smartcardIOControl_Call {
 	
-	QByteArray 			_szReader;
-//	QString 			_szReader;
+//	QByteArray 			_szReader;
+	QString 			_szReader;
 	// Connect_Common struct:
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_dwShareMode;
@@ -236,4 +233,26 @@ public:
 	const QByteArray& getReaderNames() const {return _response._mszReaderNames;}
 	quint32 getDwState() {return _response._dwState;}
 	quint32 getDwProtocol() {return _response._dwProtocol;}
+};
+
+class Transmit_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDHANDLE 	_hCard;
+	SCardIO_Request		_ioSendPci;
+	quint32 			_cbSendLength;
+//	QByteArray 			_pbSendBuffer;
+	QString				_pbSendBuffer;
+	std::shared_ptr<SCardIO_Request> 	_pioRecvPci;
+	quint32				_fpbRecvBufferIsNULL;
+	quint32 			_cbRecvLength;
+
+	Transmit_Return		_response;
+
+public:
+	Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_request_rpc&  pioSendPci, const std::string& pbSendBuffer, quint64 pcbRecvLength, quint32 ioControlCode = SCARD_IOCTL_TRANSMIT);
+	virtual ~Transmit_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	qint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._pbRecvBuffer;}
 };

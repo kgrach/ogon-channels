@@ -847,15 +847,15 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	_hContext._cbContext = sizeof(hContext); // 8 байт
 	_hContext._pbContext << hContext;
 
-	_szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
+	// _szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
+	_szReader = szReader.c_str();
+	_szReader = _szReader.leftJustified(_szReader.size() + 1, '\0');
 
 	_dwShareMode = dwShareMode;
 	_dwPreferredProtocols = dwPreferredProtocols;
 
-	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength)) { // 4 - любое значение больше 0
-		CWLOG_WRN(TAG, "packRedirScardContext fail. Error: 0x%08" PRIX32 "", status);
-	}
-
+	ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength); // 4 - любое значение больше 0
+		
 	status = packRedirScardContext(tmpInputBuffer, _hContext, index, pbContextNdrPtr, objectBufferLength);
 	if( status!= SCARD_S_SUCCESS ){
 		CWLOG_WRN(TAG, "packRedirScardContext fail");
@@ -979,9 +979,7 @@ GetStatusChange_Call::GetStatusChange_Call(quint64 hContext, const DWORD_RPC dwT
 	tmpInputBuffer << _cReaders;
 	objectBufferLength += sizeof(_cReaders);
 
-	if(!ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength)) { // 4 - любое значение больше 0
-		CWLOG_WRN(TAG, "ndrPointerWrite fail. Error: 0x%08" PRIX32 "", status);
-	}
+	ndrPointerWrite(tmpInputBuffer, index, 4, ndrPtr, objectBufferLength); // 4 - любое значение больше 0
 
 	tmpInputBuffer << _hContext._cbContext;
 	tmpInputBuffer << hContext; 
@@ -1091,8 +1089,6 @@ void Status_Call::setResponse(QByteArray& buf){
 	uint32_t 	index = 0;
 	quint32 objectBufferLength;
 	quint32 ndrPtr = 0;
-	// quint32 offset4 = 0;
-	// quint64 offset8 = 0;
 	RdpStreamBuffer rsb(buf);
 	rsb.sealLength(buf.size());
 
@@ -1131,4 +1127,127 @@ void Status_Call::setResponse(QByteArray& buf){
 	// else {
 	// 	ndrRead(rsb, _response._mszReaderNames, _response._cBytes, sizeof(CHAR), NDR_PTR_SIMPLE);
 	// }
+}
+
+Transmit_Call::Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_request_rpc&  pioSendPci, const std::string& pbSendBuffer, quint64 pcbRecvLength, quint32 ioControlCode){
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	pbContextNdrPtr;
+	quint32 	pbExtraBytesNdrPtr = 0;
+	quint32 	pbSendBufferNdrPtr = 0;
+	quint32 	pioRecvPciNdrPtr = 0;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_hCard._cbHandle = sizeof(hCard); 	// 8 байт
+	_hCard._pbHandle << hCard;
+	_hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_hCard._Context._pbContext << hContext;
+
+	_ioSendPci._dwProtocol = pioSendPci.dwProtocol;
+	_ioSendPci._cbExtraBytes = 0; //pioSendPci.cbPciLength - sizeof(SCARD_IO_REQUEST); // TODO: разобраться с формированием _cbExtraBytes и для чего нужен параметр pioSendPci.cbPciLength
+
+	_cbSendLength = pbSendBuffer.size();
+
+	//_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
+	_pbSendBuffer = pbSendBuffer.c_str();
+	CWLOG_ERR(TAG, "!!!!!!!!!!!!!!!!!!! _pbSendBuffer = %" PRIu64 " (string = %s)", _pbSendBuffer.data(), _pbSendBuffer.data());
+	_pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
+	CWLOG_ERR(TAG, "!!!!!!!!!!!!!!!!!!! _pbSendBuffer = %" PRIu64 " (string = %s)", _pbSendBuffer.data(), _pbSendBuffer.data());
+
+	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardContext fail");
+	}
+
+	status = packRedirScardHandle(tmpInputBuffer, _hCard, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardHandle fail");
+	}
+
+	tmpInputBuffer << _ioSendPci._dwProtocol;
+	objectBufferLength += sizeof(_ioSendPci._dwProtocol);
+
+	tmpInputBuffer << _ioSendPci._cbExtraBytes;
+	objectBufferLength += sizeof(_ioSendPci._cbExtraBytes);
+	ndrPointerWrite(tmpInputBuffer, index, _ioSendPci._cbExtraBytes, pbExtraBytesNdrPtr, objectBufferLength); 	// 0 - т.к. _cbExtraBytes нулевое значение. См. TODO для pbExtraBytesNdrPtr ниже
+
+
+	tmpInputBuffer << _cbSendLength;
+	objectBufferLength += sizeof(_cbSendLength);
+	ndrPointerWrite(tmpInputBuffer, index, _cbSendLength, pbSendBufferNdrPtr, objectBufferLength); 	// 1 - любое значение больше 0 для формирования ненулевого Ndr
+
+	ndrPointerWrite(tmpInputBuffer, index, 0, pioRecvPciNdrPtr, objectBufferLength); 	// 0 - см TODO для pioRecvPciNdrPtr ниже
+	
+	tmpInputBuffer << _fpbRecvBufferIsNULL;
+	objectBufferLength += sizeof(_fpbRecvBufferIsNULL);
+
+	tmpInputBuffer << _cbRecvLength;
+	objectBufferLength += sizeof(_cbRecvLength);
+	
+	tmpInputBuffer << _hCard._Context._cbContext;
+	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hCard._Context._cbContext) + _hCard._Context._pbContext.size();
+
+	tmpInputBuffer << _hCard._cbHandle;
+	tmpInputBuffer << hCard; 
+	objectBufferLength += sizeof(_hCard._cbHandle) + _hCard._pbHandle.size();
+
+	if (pbExtraBytesNdrPtr) {
+		// TODO: см. код remmina функция smartcard_unpack_transmit_call() файл smartcard_pack.c строка 3805 блок if (pbExtraBytesNdrPtr)...
+	}
+
+	if (pbSendBufferNdrPtr) {
+		ndrWrite(tmpInputBuffer, _pbSendBuffer, _cbSendLength, 1, NDR_PTR_SIMPLE, objectBufferLength, false);
+  	}
+
+	if (pioRecvPciNdrPtr) {
+		// TODO: см. код remmina функция smartcard_unpack_transmit_call() файл smartcard_pack.c строка 3869 блок if (pioRecvPciNdrPtr)
+	}
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Transmit_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+
+	ndrPointerRead(rsb, index, ndrPtr);
+
+	rsb >> _response._cbRecvLength;
+
+	ndrPointerRead(rsb, index, ndrPtr);
+
+	if(_response._pioRecvPci){
+		// TODO: Разобраться по какому признаку можно понять нужно ли зачитывать _pioRecvPci
+//		rsb >> _response._pioRecvPci._dwProtocol;
+	}
+
+	ndrRead(rsb, _response._pbRecvBuffer, _response._cbRecvLength, 1, NDR_PTR_SIMPLE);
 }
