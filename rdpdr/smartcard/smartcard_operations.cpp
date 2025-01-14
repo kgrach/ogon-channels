@@ -1,6 +1,7 @@
 #include "smartcard_operations.h"
 #include "QByteArrayWriteInteger.h"
 #include <ogon-channels/logging.h>
+#include <QDebug>
 
 //#include <locale> // для конвертера из UNICODE в ASCII
 
@@ -530,13 +531,13 @@ bool smartcardIOControl_Call::ndrPointerWrite(QByteArray& buf, uint32_t& index, 
 	return true;
 }
 
-uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode){
+uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QByteArray& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode){
 	
 	quint32 len = size;
 	quint32 dataLen = size * elementSize;
 	quint32 offsetNdr = 0;
 	QByteArray bufPadding;
-
+// qInfo() << "########### data = " << hex << data;
 	if (size == 0){
 		return SCARD_S_SUCCESS;
     }
@@ -556,19 +557,24 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QString& data,
 		case NDR_PTR_FIXED:
 			break;
 	}
-
+// qInfo() << "########### buf = " << hex << buf;	
 	if (data.data()) {
 		if(unicode){
-			QByteArray tmp((const char*) (data.utf16()), dataLen);
+			// QByteArray tmp((const char*) (data.utf16()), dataLen); // when data is QString
+			
+			// auto tmpStr16 = QString(data).utf16();
+			// QByteArray tmp = QByteArray((const char*)tmpStr16, dataLen);
+			QByteArray tmp = QByteArray((const char*)QString(data).utf16(), dataLen);
 			buf.append(tmp);			
 		} else {
-			buf.append(data.toStdString().c_str(), dataLen);
+			//buf.append(data.toStdString().c_str(), dataLen); // when data is QString
+			buf.append(data);
 		}
 	}
 	else {		
 		buf.append(dataLen, '0'); // заполним нулями
 	}
-	
+// qInfo() << "########### buf = " << hex << buf;	
 	offset +=  dataLen;
 
 	quint32 paddingSize = getPadding(bufPadding, dataLen, 4);
@@ -741,9 +747,17 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerNa
 	quint32 	pbContextNdrPtr = 0x00020000;
 	quint32 	mszGroupsNdrPtr = 0;
 	QByteArray 	tmpInputBuffer;
-//	_mszGroups = QByteArray(readerName.c_str(), readerName.size() + 2); // почему +2 пока не понятно, должно быть +1, но иначе не хватает этого байта 
-	_mszGroups = readerName.c_str();
-	_mszGroups = _mszGroups.leftJustified(_mszGroups.size() + 2, '\0');
+	_mszGroups = QByteArray(readerName.c_str(), readerName.size() + 2); // почему +2 пока не понятно, должно быть +1, но иначе не хватает этого байта 
+	// _mszGroups = readerName.c_str();
+	// _mszGroups = _mszGroups.leftJustified(_mszGroups.size() + 2, '\0');
+
+// QByteArray tmp((const char*) (_mszGroups.utf16()), _mszGroups.size() + 2);
+// qInfo() << "########### _mszGroups = " << hex << _mszGroups << " byteArray = " << tmp;
+// QByteArray baFromStdString = QByteArray(readerName.c_str(), readerName.size() + 2);
+// qInfo() << "########### baFromStdString = " << hex << baFromStdString;
+// auto tmpStr16 = QString(baFromStdString).utf16();
+// QByteArray baUtf16 = QByteArray((const char*)tmpStr16, _mszGroups.size() + 2);
+// qInfo() << "########### tmpStr16 = " << hex << tmpStr16 << " baUtf16 = " << hex << baUtf16;
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
@@ -847,9 +861,9 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	_hContext._cbContext = sizeof(hContext); // 8 байт
 	_hContext._pbContext << hContext;
 
-	// _szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
-	_szReader = szReader.c_str();
-	_szReader = _szReader.leftJustified(_szReader.size() + 1, '\0');
+	_szReader = QByteArray(szReader.c_str(), szReader.size() + 1);
+	// _szReader = szReader.c_str();
+	// _szReader = _szReader.leftJustified(_szReader.size() + 1, '\0');
 
 	_dwShareMode = dwShareMode;
 	_dwPreferredProtocols = dwPreferredProtocols;
@@ -1151,12 +1165,30 @@ Transmit_Call::Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_req
 	_ioSendPci._cbExtraBytes = 0; //pioSendPci.cbPciLength - sizeof(SCARD_IO_REQUEST); // TODO: разобраться с формированием _cbExtraBytes и для чего нужен параметр pioSendPci.cbPciLength
 
 	_cbSendLength = pbSendBuffer.size();
+	
+	// _pbSendBuffer = QString::fromStdString(pbSendBuffer);
+	// _pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
+	_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
+// qInfo() << "########### _pbSendBuffer = " << hex << _pbSendBuffer;	
+	
+	
 
-	//_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
-	_pbSendBuffer = pbSendBuffer.c_str();
-	CWLOG_ERR(TAG, "!!!!!!!!!!!!!!!!!!! _pbSendBuffer = %" PRIu64 " (string = %s)", _pbSendBuffer.data(), _pbSendBuffer.data());
-	_pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
-	CWLOG_ERR(TAG, "!!!!!!!!!!!!!!!!!!! _pbSendBuffer = %" PRIu64 " (string = %s)", _pbSendBuffer.data(), _pbSendBuffer.data());
+// QByteArray tmpByteArr1;
+// tmpByteArr1.append(_pbSendBuffer);
+// qInfo() << "########### _pbSendBuffer = " << _pbSendBuffer << " (" << hex  << tmpByteArr1 << ")";	
+// QString tmp2 = QString::fromUtf8(pbSendBuffer.c_str(), pbSendBuffer.size());
+// QByteArray tmpByteArr2;
+// QByteArray tmpByteArr21;
+// tmpByteArr2.append(tmp2.toStdString().c_str(), _cbSendLength);
+// tmpByteArr21.append(tmp2.toUtf8());
+// qInfo() << "########### tmp2 = " << tmp2 << " ("  << tmpByteArr2 << ") " << tmpByteArr21;	
+// QString tmp3 = QString::fromLatin1(pbSendBuffer.c_str(), pbSendBuffer.size());
+// QByteArray tmpByteArr3;
+// QByteArray tmpByteArr31;
+// tmpByteArr3.append(tmp3.toStdString().c_str(), _cbSendLength);
+// tmpByteArr31.append(tmp3.toUtf8());
+// qInfo() << "########### tmp3 = " << tmp3 << " (" << hex << tmpByteArr3 << ") " << tmpByteArr31;
+
 
 	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
 	if( status!= SCARD_S_SUCCESS ){

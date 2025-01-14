@@ -98,7 +98,7 @@ protected:
 	bool ndrPointerRead(RdpStreamBuffer& stream, uint32_t& index, quint32& ptr); // RPC NDR [MS-RPCE 2.2.6.2]
 	bool ndrPointerWrite(QByteArray& buf, uint32_t& index, uint32_t length, quint32& ndrPtr, quint32& offset);
 	
-	uint32_t ndrWrite(QByteArray& buf, const QString& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
+	uint32_t ndrWrite(QByteArray& buf, const QByteArray& data, quint32 size, uint32_t elementSize, ndr_ptr_t type, quint32& offset, bool unicode);
 	uint32_t ndrRead(RdpStreamBuffer& stream, QByteArray& data, size_t min, size_t elementSize, ndr_ptr_t type);
 
 	/*
@@ -157,8 +157,8 @@ public:
 class ListReaders_Call :  public smartcardIOControl_Call {
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_cBytes{0};
-//	QByteArray 			_mszGroups;
-	QString 			_mszGroups;
+	QByteArray 			_mszGroups;
+//	QString 			_mszGroups;
 	quint32 			_fmszReadersIsNULL{0};
 	quint32				_ccReaders{0};
 
@@ -176,8 +176,8 @@ public:
 
 class Connect_Call :  public smartcardIOControl_Call {
 	
-//	QByteArray 			_szReader;
-	QString 			_szReader;
+	QByteArray 			_szReader;
+	// QString 			_szReader;
 	// Connect_Common struct:
 	REDIR_SCARDCONTEXT 	_hContext;
 	quint32 			_dwShareMode;
@@ -240,8 +240,8 @@ class Transmit_Call :  public smartcardIOControl_Call {
 	REDIR_SCARDHANDLE 	_hCard;
 	SCardIO_Request		_ioSendPci;
 	quint32 			_cbSendLength;
-//	QByteArray 			_pbSendBuffer;
-	QString				_pbSendBuffer;
+	QByteArray 			_pbSendBuffer;
+	// QString				_pbSendBuffer;
 	std::shared_ptr<SCardIO_Request> 	_pioRecvPci;
 	quint32				_fpbRecvBufferIsNULL;
 	quint32 			_cbRecvLength;
