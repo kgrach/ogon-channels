@@ -28,19 +28,19 @@ struct REDIR_SCARDHANDLE
 
 struct Long_Return
 {
-	qint32 _returnCode;
+	quint32 	_returnCode {0x80100001}; // SCARD_F_INTERNAL_ERROR
 };
 
 struct longAndMultiString_Return
 {
-	qint32 		_returnCode;
+	quint32 		_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	quint32 	_cBytes;
 	QByteArray 	_msz;
 };
 
 struct EstablishContext_Return
 {	
-	qint32 				_returnCode;
+	quint32 				_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	REDIR_SCARDCONTEXT 	_hContext;
 }; 
 
@@ -55,7 +55,7 @@ public:
 
 class Connect_Return {
 public:
-	qint32 				_returnCode;
+	quint32 				_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	REDIR_SCARDHANDLE 	_hCard;
 	quint32 		 	_dwActiveProtocol;
 };
@@ -86,14 +86,14 @@ public:
 class GetStatusChange_Return
 {
 public:	
-	qint32 							_returnCode{0};
+	quint32 							_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	quint32 						_cReaders{0};
 	std::vector<ReaderState_Return>	_rgReaderStates;
 }; 
 
 class Status_Return {
 public:	
-	qint32 		_returnCode{0};
+	quint32 		_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	quint32 	_cBytes{0};
 	QByteArray 	_mszReaderNames;
 	quint32 	_dwState{0};
@@ -105,8 +105,16 @@ public:
 
 class Transmit_Return{
 public:	
-	qint32 		_returnCode{0};
+	quint32 		_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	std::shared_ptr<SCardIO_Request> 	_pioRecvPci;
 	quint32 	_cbRecvLength{0};
 	QByteArray 	_pbRecvBuffer;
+};
+
+
+// ===================== calls ========================
+class HCardAndDisposition_Call{
+public:	
+	REDIR_SCARDHANDLE 	_hCard;
+	quint32 			_dwDisposition;
 };

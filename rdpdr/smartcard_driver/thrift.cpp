@@ -108,9 +108,6 @@ public:
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
 
-    // SCARDHANDLE phCard;
-    // DWORD pdwActiveProtocol;
-
     std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTW);
     globalSmartCardOperationsThread->createHandle(connect_Call);
 
@@ -140,22 +137,19 @@ public:
   }
 
   LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
-    // Your implementation goes here
-    printf("Disconnect\n");
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
 
-    printf ("Server received SCardDisconnect: SCARDHANDLE=%ld\n", hCard);
+    std::shared_ptr<Disconnect_Call> disconnect_Call = std::make_shared<Disconnect_Call>(hCard, hContext, dwDisposition, SCARD_IOCTL_DISCONNECT);
+    globalSmartCardOperationsThread->createHandle(disconnect_Call);
 
-    LONG rv = SCardDisconnect(hCard, dwDisposition);
-
-    printf ("SCardDisconnect return %ld\n", rv);
-
-    // This is code for current project only, it don't need into ogon
-    // ------------- Begin -------------
     std::lock_guard<std::mutex> lock(mtx_);
     Card2Context_.erase(hCard);
-    // -------------  End  -------------
     
-    return rv;
+    return disconnect_Call->getReturnCode();
   }
 
   void Status(return_s& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC pcchReaderLen, const DWORD_RPC pcbAtrLen) {

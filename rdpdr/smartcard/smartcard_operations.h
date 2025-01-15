@@ -87,6 +87,7 @@ protected:
 	uint32_t packRedirScardContext(QByteArray& buf, const REDIR_SCARDCONTEXT& context, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset); // RPC NDR [MS-RPCE 2.2.6.2]
 	uint32_t packRedirScardHandle(QByteArray& buf, const REDIR_SCARDHANDLE& handle, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset);
 	int32_t packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode);
+	void packHcardAndDispositionCall(QByteArray& buf, const HCardAndDisposition_Call& call, quint32& offset);
 
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
@@ -121,7 +122,7 @@ public:
 	virtual const QByteArray& getInputBuffer() const { return _inputBuffer; }
 
 	virtual void setResponse(QByteArray& buf) = 0;
-	virtual qint64 getReturnCode() const = 0;
+	virtual quint64 getReturnCode() const = 0;
 	virtual const QByteArray& getReturnReply() const = 0;
 };
 
@@ -131,7 +132,7 @@ public:
 	ScardAccessStartedEvent_Call();
 	virtual ~ScardAccessStartedEvent_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override {}
-	qint64 getReturnCode() const override {return 0; }
+	quint64 getReturnCode() const override {return 0; }
 	const QByteArray& getReturnReply() const override { return QByteArray();}
 };
 
@@ -150,7 +151,7 @@ public:
 	EstablishContext_Call();
 	virtual ~EstablishContext_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._hContext._pbContext;}
 };
 
@@ -169,7 +170,7 @@ public:
 	virtual ~ListReaders_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._msz;}
 	quint32 getReturnCBytes() const {return _response._cBytes;}
 };
@@ -190,7 +191,7 @@ public:
 	virtual ~Connect_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._hCard._pbHandle;}
 //	int64_t getHCard() const {return _response._hCard._pbHandle;}
 	quint32 getActiveProtocol() const {return _response._dwActiveProtocol;}
@@ -209,7 +210,7 @@ public:
 	virtual ~GetStatusChange_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return QByteArray();}
 	const std::vector<ReaderState_Return>& getGetStatusChange_Return() const {return _response._rgReaderStates;}
 };
@@ -228,7 +229,7 @@ public:
 	virtual ~Status_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._pbAtr;}
 	const QByteArray& getReaderNames() const {return _response._mszReaderNames;}
 	quint32 getDwState() {return _response._dwState;}
@@ -253,7 +254,23 @@ public:
 	virtual ~Transmit_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
-	qint64 getReturnCode() const override {return _response._returnCode; }
+	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._pbRecvBuffer;}
 	quint32 getCbRecvLength() const { return _response._cbRecvLength; }
+};
+
+
+class Disconnect_Call :  public smartcardIOControl_Call {
+	
+	HCardAndDisposition_Call _call;
+
+	Long_Return			_response;
+
+public:
+	Disconnect_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode = SCARD_IOCTL_DISCONNECT);
+	virtual ~Disconnect_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
 };

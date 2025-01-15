@@ -365,6 +365,26 @@ int32_t smartcardIOControl_Call::packReaderState(QByteArray& buf, std::vector<Re
 	return status;
 }
 
+void smartcardIOControl_Call::packHcardAndDispositionCall(QByteArray& buf, const HCardAndDisposition_Call& call, quint32& offset){
+	uint32_t 	index = 0;
+	quint32 	pbContextNdrPtr;
+	quint32 	pbHcardNdrPtr;
+
+	packRedirScardContext(buf, call._hCard._Context, index, pbContextNdrPtr, offset);
+	packRedirScardHandle(buf, call._hCard, index, pbHcardNdrPtr, offset);
+
+	buf << call._dwDisposition;
+	offset += sizeof(call._dwDisposition);
+
+	buf << call._hCard._Context._cbContext;
+	buf.append(call._hCard._Context._pbContext); 
+	offset += sizeof(call._hCard._Context._cbContext) + call._hCard._Context._pbContext.size();
+
+	buf << call._hCard._cbHandle;
+	buf.append(call._hCard._pbHandle); 
+	offset += sizeof(call._hCard._cbHandle) + call._hCard._pbHandle.size();
+}
+
 uint32_t smartcardIOControl_Call::unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index) {
  
 	quint32 pbContextNdrPtr;
@@ -562,8 +582,6 @@ uint32_t smartcardIOControl_Call::ndrWrite(QByteArray& buf, const QByteArray& da
 		if(unicode){
 			// QByteArray tmp((const char*) (data.utf16()), dataLen); // when data is QString
 			
-			// auto tmpStr16 = QString(data).utf16();
-			// QByteArray tmp = QByteArray((const char*)tmpStr16, dataLen);
 			QByteArray tmp = QByteArray((const char*)QString(data).utf16(), dataLen);
 			buf.append(tmp);			
 		} else {
@@ -1143,6 +1161,7 @@ void Status_Call::setResponse(QByteArray& buf){
 	// }
 }
 
+//==================================== Transmit_Call =============================================
 Transmit_Call::Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_request_rpc&  pioSendPci, const std::string& pbSendBuffer, quint64 pcbRecvLength, quint32 ioControlCode){
 	uint32_t 	index = 0;
 	quint32 	objectBufferLength = 0;
@@ -1285,4 +1304,56 @@ void Transmit_Call::setResponse(QByteArray& buf){
 	}
 
 	ndrRead(rsb, _response._pbRecvBuffer, _response._cbRecvLength, 1, NDR_PTR_SIMPLE);
+}
+
+
+//==================================== Disconnect_Call =============================================
+Disconnect_Call::Disconnect_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode ){
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_call._hCard._cbHandle = sizeof(hCard); 	// 8 байт
+	_call._hCard._pbHandle << hCard;
+	_call._hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_call._hCard._Context._pbContext << hContext;
+
+	_call._dwDisposition = dwDisposition;	
+
+	packHcardAndDispositionCall(tmpInputBuffer, _call, objectBufferLength);
+	
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Disconnect_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
 }
