@@ -134,6 +134,18 @@ public:
 
     // _return.retValue = rv;
     // _return.pdwActiveProtocol = pdwActiveProtocol;
+
+     SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
+
+    std::shared_ptr<Reconnect_Call> reconnect_Call = std::make_shared<Reconnect_Call>(hCard, hContext, dwShareMode, dwPreferredProtocols, dwInitialization, SCARD_IOCTL_RECONNECT);
+    globalSmartCardOperationsThread->createHandle(reconnect_Call);
+
+    _return.retValue = reconnect_Call->getReturnCode();
+    _return.pdwActiveProtocol = reconnect_Call->getDwActiveProtocol();
   }
 
   LONG_RPC Disconnect(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
@@ -146,8 +158,9 @@ public:
     std::shared_ptr<Disconnect_Call> disconnect_Call = std::make_shared<Disconnect_Call>(hCard, hContext, dwDisposition, SCARD_IOCTL_DISCONNECT);
     globalSmartCardOperationsThread->createHandle(disconnect_Call);
 
-    std::lock_guard<std::mutex> lock(mtx_);
-    Card2Context_.erase(hCard);
+// пока закомментил, т.к. в PCSC_DEMO после DISCONNECT идет RECONNECT, в котором требуется context
+//    std::lock_guard<std::mutex> lock(mtx_);
+//    Card2Context_.erase(hCard);
     
     return disconnect_Call->getReturnCode();
   }

@@ -111,6 +111,12 @@ public:
 	QByteArray 	_pbRecvBuffer;
 };
 
+class Reconnect_Return{
+public:	
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_dwActiveProtocol{0};
+};
+
 
 // ===================== calls ========================
 class HCardAndDisposition_Call{

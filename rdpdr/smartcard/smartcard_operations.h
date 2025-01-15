@@ -274,3 +274,23 @@ public:
 	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return QByteArray();}
 };
+
+
+class Reconnect_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDHANDLE 	_hCard;
+	quint32	 			_dwShareMode;
+	quint32 			_dwPreferredProtocols;
+	quint32 			_dwInitialization;
+
+	Reconnect_Return	_response;
+
+public:
+	Reconnect_Call(quint64 hCard, quint64 hContext, int64_t dwShareMode, int64_t dwPreferredProtocols, int64_t dwInitialization, quint32 ioControlCode = SCARD_IOCTL_RECONNECT);
+	virtual ~Reconnect_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
+	quint32 getDwActiveProtocol() const {return _response._dwActiveProtocol;}
+};

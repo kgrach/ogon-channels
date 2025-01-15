@@ -1326,7 +1326,7 @@ Disconnect_Call::Disconnect_Call(quint64 hCard, quint64 hContext, int64_t dwDisp
 	_call._dwDisposition = dwDisposition;	
 
 	packHcardAndDispositionCall(tmpInputBuffer, _call, objectBufferLength);
-	
+
 	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
 				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
 				+ objectBufferLength); 
@@ -1356,4 +1356,83 @@ void Disconnect_Call::setResponse(QByteArray& buf){
 	}
 
 	rsb >> _response._returnCode;
+}
+
+//==================================== Disconnect_Call =============================================
+Reconnect_Call::Reconnect_Call(quint64 hCard, quint64 hContext, int64_t dwShareMode, int64_t dwPreferredProtocols, int64_t dwInitialization, quint32 ioControlCode){
+	
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	pbContextNdrPtr = 0x00020000;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_dwShareMode = dwShareMode;
+	_dwPreferredProtocols = dwPreferredProtocols;
+	_dwInitialization = dwInitialization;
+	_hCard._cbHandle = sizeof(hCard); // 8 байт
+	_hCard._pbHandle << hCard;
+	_hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_hCard._Context._pbContext << hContext;
+
+	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardContext fail");
+	}
+
+	status = packRedirScardHandle(tmpInputBuffer, _hCard, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardHandle fail");
+	}
+
+	tmpInputBuffer << _dwShareMode;
+	objectBufferLength += sizeof(_dwShareMode);
+
+	tmpInputBuffer << _dwPreferredProtocols;
+	objectBufferLength += sizeof(_dwPreferredProtocols);
+
+	tmpInputBuffer << _dwInitialization;
+	objectBufferLength += sizeof(_dwInitialization);
+
+	tmpInputBuffer << _hCard._Context._cbContext;
+	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hCard._Context._cbContext) + _hCard._Context._pbContext.size();
+
+	tmpInputBuffer << _hCard._cbHandle;
+	tmpInputBuffer << hCard; 
+	objectBufferLength += sizeof(_hCard._cbHandle) + _hCard._pbHandle.size();
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Reconnect_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+	rsb >> _response._dwActiveProtocol;
 }
