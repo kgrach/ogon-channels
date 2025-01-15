@@ -356,9 +356,9 @@ int32_t smartcardIOControl_Call::packReaderState(QByteArray& buf, std::vector<Re
 	for (index = 0; index < cReaders; index++)
 	{
 		if(unicode){
-			status = ndrWrite(buf, ppcReaders[index]._szReader.data(), ppcReaders[index]._szReader.size(), sizeof(WCHAR), NDR_PTR_FULL, offset, unicode);		
+			status = ndrWrite(buf, ppcReaders[index]._szReader, ppcReaders[index]._szReader.size(), sizeof(WCHAR), NDR_PTR_FULL, offset, unicode);		
 		} else {
-			status = ndrWrite(buf, ppcReaders[index]._szReader.data(), ppcReaders[index]._szReader.size(), sizeof(CHAR), NDR_PTR_FULL, offset, unicode);		
+			status = ndrWrite(buf, ppcReaders[index]._szReader, ppcReaders[index]._szReader.size(), sizeof(CHAR), NDR_PTR_FULL, offset, unicode);		
 		}
 	}
 
@@ -1164,15 +1164,16 @@ Transmit_Call::Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_req
 	_ioSendPci._dwProtocol = pioSendPci.dwProtocol;
 	_ioSendPci._cbExtraBytes = 0; //pioSendPci.cbPciLength - sizeof(SCARD_IO_REQUEST); // TODO: разобраться с формированием _cbExtraBytes и для чего нужен параметр pioSendPci.cbPciLength
 
+	_fpbRecvBufferIsNULL = 0;
+	_cbRecvLength = SHRT_MAX;
 	_cbSendLength = pbSendBuffer.size();
 	
 	// _pbSendBuffer = QString::fromStdString(pbSendBuffer);
 	// _pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
 	_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
+
 // qInfo() << "########### _pbSendBuffer = " << hex << _pbSendBuffer;	
 	
-	
-
 // QByteArray tmpByteArr1;
 // tmpByteArr1.append(_pbSendBuffer);
 // qInfo() << "########### _pbSendBuffer = " << _pbSendBuffer << " (" << hex  << tmpByteArr1 << ")";	
@@ -1278,7 +1279,9 @@ void Transmit_Call::setResponse(QByteArray& buf){
 
 	if(_response._pioRecvPci){
 		// TODO: Разобраться по какому признаку можно понять нужно ли зачитывать _pioRecvPci
-//		rsb >> _response._pioRecvPci._dwProtocol;
+		//  после этого не забудь поменять присваиваемые значения в thrift.cpp для параметров:
+		// 	ioRecvPciRPC.dwProtocol = 0;  // _response._pioRecvPci.dwProtocol;
+    	// 	ioRecvPciRPC.cbPciLength = 0; // _response._pioRecvPci.cbPciLength;
 	}
 
 	ndrRead(rsb, _response._pbRecvBuffer, _response._cbRecvLength, 1, NDR_PTR_SIMPLE);

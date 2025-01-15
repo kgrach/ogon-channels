@@ -255,4 +255,5 @@ public:
 	void setResponse(QByteArray& buf) override;
 	qint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._pbRecvBuffer;}
+	quint32 getCbRecvLength() const { return _response._cbRecvLength; }
 };

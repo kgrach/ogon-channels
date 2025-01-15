@@ -195,7 +195,7 @@ public:
   }
 
   void Transmit(return_t& _return, const SCARDHANDLE_RPC hCard, const scard_io_request_rpc& pioSendPci, const LPBYTE_RPC& pbSendBuffer, const DWORD_RPC pcbRecvLength) {
-    // pbSendBuffer = { 0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00 }
+  
     SCARDCONTEXT_RPC hContext;
     {
       std::lock_guard<std::mutex> lock(mtx_);
@@ -205,32 +205,14 @@ public:
     std::shared_ptr<Transmit_Call> transmit_Call = std::make_shared<Transmit_Call>(hCard, hContext, pioSendPci, pbSendBuffer, pcbRecvLength, SCARD_IOCTL_TRANSMIT);
     globalSmartCardOperationsThread->createHandle(transmit_Call);
 
-    printf("Transmit\n");
-    SCARD_IO_REQUEST ioSendPci, ioRecvPci;
+    scard_io_request_rpc ioRecvPciRPC;
 
-    LPCBYTE sendBuffer = (unsigned char*)pbSendBuffer.c_str();
-    DWORD sendBufferLength = pbSendBuffer.length();
-    DWORD recvBufferLength = pcbRecvLength;
-
-    std::vector<char> recv;
-
-    recv.resize(recvBufferLength);
-
-    ioSendPci.dwProtocol = pioSendPci.dwProtocol;
-    ioSendPci.cbPciLength = pioSendPci.cbPciLength;
-
-    printf("Server received SCardTransmit: SCARDHANDLE=%ld\n", hCard);
-
-//    LONG rv = SCardTransmit(hCard, &ioSendPci, sendBuffer, sendBufferLength, &ioRecvPci, (unsigned char*)recv.data(), &recvBufferLength);
-
-    scard_io_request_rpc ioSendPciRPC;
-
-    ioSendPciRPC.dwProtocol = ioRecvPci.dwProtocol;
-    ioSendPciRPC.cbPciLength = ioRecvPci.cbPciLength;
+    ioRecvPciRPC.dwProtocol = 0;  // _response._pioRecvPci.dwProtocol;
+    ioRecvPciRPC.cbPciLength = 0; // _response._pioRecvPci.cbPciLength;
 
     _return.retValue = transmit_Call->getReturnCode();;
-    _return.pioRecvPci = ioSendPciRPC;
-    _return.pbRecvBuffer = std::string(recv.data(), recvBufferLength);
+    _return.pioRecvPci = ioRecvPciRPC;
+    _return.pbRecvBuffer = std::string(transmit_Call->getReturnReply().data(), transmit_Call->getCbRecvLength());
   }
 
   LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {
