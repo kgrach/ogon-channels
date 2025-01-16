@@ -275,7 +275,6 @@ public:
 	const QByteArray& getReturnReply() const override {return QByteArray();}
 };
 
-
 class Reconnect_Call :  public smartcardIOControl_Call {
 	
 	REDIR_SCARDHANDLE 	_hCard;
@@ -293,4 +292,35 @@ public:
 	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return QByteArray();}
 	quint32 getDwActiveProtocol() const {return _response._dwActiveProtocol;}
+};
+
+
+class BeginTransaction_Call :  public smartcardIOControl_Call {
+	
+	HCardAndDisposition_Call _call;
+
+	Long_Return	_response;
+
+public:
+	BeginTransaction_Call(quint64 hCard, quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_BEGINTRANSACTION);
+	virtual ~BeginTransaction_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
+};
+
+class EndTransaction_Call :  public smartcardIOControl_Call {
+	
+	HCardAndDisposition_Call _call;
+
+	Long_Return	_response;
+
+public:
+	EndTransaction_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode = SCARD_IOCTL_ENDTRANSACTION);
+	virtual ~EndTransaction_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
 };

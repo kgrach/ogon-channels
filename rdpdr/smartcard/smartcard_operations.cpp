@@ -1436,3 +1436,103 @@ void Reconnect_Call::setResponse(QByteArray& buf){
 	rsb >> _response._returnCode;
 	rsb >> _response._dwActiveProtocol;
 }
+
+//==================================== BeginTransaction_Call =============================================
+BeginTransaction_Call::BeginTransaction_Call(quint64 hCard, quint64 hContext, quint32 ioControlCode ){
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_call._hCard._cbHandle = sizeof(hCard); 	// 8 байт
+	_call._hCard._pbHandle << hCard;
+	_call._hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_call._hCard._Context._pbContext << hContext;	
+
+	packHcardAndDispositionCall(tmpInputBuffer, _call, objectBufferLength);
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void BeginTransaction_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+}
+
+//==================================== EndTransaction_Call =============================================
+EndTransaction_Call::EndTransaction_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode ){
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_call._hCard._cbHandle = sizeof(hCard); 	// 8 байт
+	_call._hCard._pbHandle << hCard;
+	_call._hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_call._hCard._Context._pbContext << hContext;
+
+	_call._dwDisposition = dwDisposition;	
+
+	packHcardAndDispositionCall(tmpInputBuffer, _call, objectBufferLength);
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void EndTransaction_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+}
