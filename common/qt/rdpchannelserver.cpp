@@ -426,7 +426,7 @@ qint64 RDPChannelServer::writeData(const RdpStreamBuffer &stream, quint32 maxSiz
 		maxSize = stream.length();
 	}
 
-	//CWLOG_VRB(TAG, "writeData: [%s]", ((RdpStreamBuffer&)stream).toHex().constData());
+	CWLOG_VRB(TAG, "writeData: [%s]", ((RdpStreamBuffer&)stream).toHex().constData());
 
 	return writeData(stream.data(), maxSize);
 }
@@ -455,6 +455,7 @@ qint64 RDPChannelServer::writeData(const char *data, quint32 maxSize) {
 			return -1;
 		}
 		if (bytesWrittenTotal == maxSize) {
+			CWLOG_INF(TAG, "sent bites: %ld", bytesWrittenTotal);
 			return bytesWrittenTotal;
 		}
 		bytesWritten = 0;

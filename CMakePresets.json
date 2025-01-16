@@ -1,0 +1,147 @@
+{
+    "version": 3,
+    "configurePresets": [
+      {
+        "name": "linux-base",
+        "description": "Сделать целевой удаленную систему Linux.",
+        "hidden": true,
+        "generator": "Unix Makefiles",
+        "binaryDir": "${sourceDir}/out/build/${presetName}",
+        "installDir": "${sourceDir}/out/install/${presetName}",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        },
+        "condition": {
+          "type": "equals",
+          "lhs": "${hostSystemName}",
+          "rhs": "Linux"
+        },
+        "vendor": {
+          "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+            "sourceDir": "$env{HOME}/$ms{projectDirName}"
+          }
+        }
+      },
+      {
+        "name": "linux-release",
+        "displayName": "linux Release",
+        "description": "Сделать целевой удаленную систему Linux. (Release)",
+        "inherits": "linux-base",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      },
+      {
+        "name": "linux-RelWithDebInfo",
+        "displayName": "linux RelWithDebInfo",
+        "description": "Сделать целевой удаленную систему Linux. (RelWithDebInfo)",
+        "inherits": "linux-base",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        }
+      },
+      {
+        "name": "linux-debug",
+        "displayName": "Linux Debug",
+        "description": "Сделать целевой удаленную систему Linux.",
+        "inherits": "linux-base",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+      },
+      {
+        "name": "macos-debug",
+        "displayName": "macOS Debug",
+        "description": "Цель — удаленная система macOS.",
+        "generator": "Unix Makefiles",
+        "binaryDir": "${sourceDir}/out/build/${presetName}",
+        "installDir": "${sourceDir}/out/install/${presetName}",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+        },
+        "condition": {
+          "type": "equals",
+          "lhs": "${hostSystemName}",
+          "rhs": "Darwin"
+        },
+        "vendor": {
+          "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+            "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
+          }
+        }
+      },
+      {
+        "name": "windows-base",
+        "description": "Сделать целевой ОС Windows со средой разработки Visual Studio.",
+        "hidden": true,
+        "generator": "Visual Studio 17 2022",
+        "binaryDir": "${sourceDir}/out/build/${presetName}",
+        "installDir": "${sourceDir}/out/install/${presetName}",
+        "cacheVariables": {
+          "CMAKE_C_COMPILER": "cl.exe",
+          "CMAKE_CXX_COMPILER": "cl.exe"
+        },
+        "condition": {
+          "type": "equals",
+          "lhs": "${hostSystemName}",
+          "rhs": "Windows"
+        }
+      },
+      {
+        "name": "x86-debug",
+        "displayName": "x86 debug",
+        "description": "Сделать целевой ОС Windows (32-разрядная версия) со средой разработки Visual Studio. (Debug)",
+        "inherits": "windows-base",
+        "architecture": {
+          "value": "Win32",
+          "strategy": "set"
+        },
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "strategy": "set"
+        }
+      },
+      {
+        "name": "x86-release",
+        "displayName": "x86 Release",
+        "description": "Сделать целевой ОС Windows (32-разрядная версия) со средой разработки Visual Studio. (RelWithDebInfo)",
+        "inherits": "windows-base",
+        "architecture": {
+          "value": "Win32",
+          "strategy": "set"
+        },
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+          "strategy": "set"
+        }
+      },
+      {
+        "name": "x64-debug",
+        "displayName": "x64 debug",
+        "description": "Сделать целевой ОС Windows (64-разрядная версия) со средой разработки Visual Studio. (Debug)",
+        "inherits": "windows-base",
+        "architecture": {
+          "value": "x64",
+          "strategy": "set"
+        },
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "strategy": "set"
+        }
+      },
+      {
+        "name": "x64-release",
+        "displayName": "x64 Release",
+        "description": "Сделать целевой ОС Windows (64-разрядная версия) со средой разработки Visual Studio. (RelWithDebInfo)",
+        "inherits": "windows-base",
+        "architecture": {
+          "value": "x64",
+          "strategy": "set"
+        },
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+          "strategy": "set"
+        }
+      }
+    ]
+  }

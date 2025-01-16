@@ -27,7 +27,11 @@
 #include <QHash>
 #include <QMutexLocker>
 #include <QtEndian>
+#include <sys/ioctl.h>
+#include "smartcard_driver/UsbConfig.h"
+#include "smartcard_driver/thrift.h"
 #include "rdpdrchannelserver.h"
+#include "global_vars.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -250,7 +254,8 @@ bool RDPDrChannelServer::start() {
 	mHavePrinterCapability = false;
 	mHavePortCapability = false;
 	mHaveDriveCapability = true;
-	mHaveSmartCardCapability = false;
+//	mHaveSmartCardCapability = false;
+	mHaveSmartCardCapability = true;
 
 	mIsBuggyRdesktop = false;
 
@@ -459,7 +464,7 @@ bool RDPDrChannelServer::sendCoreCapabilityRequest() {
 	if (mHaveSmartCardCapability) {
 		s << quint16(CAP_SMARTCARD_TYPE); /* CapabilityType (2 bytes) */
 		s << quint16(RDPDR_CAPABILITY_HEADER_LENGTH); /* CapabilityLength (2 bytes) */
-		s << quint32(DRIVE_CAPABILITY_VERSION_01); /* Version (4 bytes) */
+		s << quint32(SMARTCARD_CAPABILITY_VERSION_01); /* Version (4 bytes) */
 	}
 
 	s.sealLength();
@@ -780,16 +785,29 @@ bool RDPDrChannelServer::receiveDeviceListAnnounceRequest(RdpStreamBuffer &s) {
 		RdpDrDevicesIterator iter = mDevices.find(deviceId);
 		if (iter != mDevices.end()) {
 			if (!iter.value()->disabled) {
-				/*
-				 * Note: MS-RDPEFS 3.2.5.1.9 / MS-RDPEFS 3.3.5.2.1
-				 * This packet MUST contain only devices that have not been announced by
-				 * previous Client Device List Announce packets.
-				 * If this message contains DeviceIds that were previously sent in a
-				 * Client Device List Announce message and the DeviceIds have not been
-				 * invalidated, the protocol MUST be terminated.
-				 */
-				CWLOG_ERR(TAG, "error: duplicated deviceId: %u - terminating protocol!", deviceId);
-				return false;
+				if(deviceType == RDPDrChannelServer::RDPDR_DTYP_SMARTCARD)
+				{
+					/* Почему-то remmina шлет дважды запрос 'Client Device List Announce Request', хотя в док-ции об этом я ничего не нашел
+					 * При этом при подключении к Windows, виндовый сервер отвечает на каждый такой запрос.
+					 * Повторим и здесь такое поведение - ответим на кажды полученный запрос
+					 */
+					if (!sendDeviceAnnounceResponse(iter.value()->id, iter.value()->status)) {
+						CWLOG_ERR(TAG, "error: next sendDeviceAnnounceResponse failed for deviceId: %u", deviceId);						
+					}			
+					continue;
+				}
+				else{
+					/*
+					* Note: MS-RDPEFS 3.2.5.1.9 / MS-RDPEFS 3.3.5.2.1
+					* This packet MUST contain only devices that have not been announced by
+					* previous Client Device List Announce packets.
+					* If this message contains DeviceIds that were previously sent in a
+					* Client Device List Announce message and the DeviceIds have not been
+					* invalidated, the protocol MUST be terminated.
+					*/
+					CWLOG_ERR(TAG, "error: duplicated deviceId: %u - terminating protocol!", deviceId);
+					return false;
+				}
 			}
 			dev = iter.value();
 		} else {
@@ -865,8 +883,8 @@ bool RDPDrChannelServer::receiveDeviceListAnnounceRequest(RdpStreamBuffer &s) {
 			}
 		}
 
-		CWLOG_DBG(TAG, "new device id: %u name='%s' status: 0x%08X",
-			dev->id, QCSTR(dev->name), dev->status);
+		CWLOG_DBG(TAG, "new device id: %u name='%s' status: 0x%08X deviceType: 0x%08X deviceDataLength: %u",
+			dev->id, QCSTR(dev->name), dev->status, deviceType, deviceDataLength);
 
 		if (!sendDeviceAnnounceResponse(dev->id, dev->status)) {
 			CWLOG_ERR(TAG, "error: sendDeviceAnnounceResponse failed");
@@ -1079,14 +1097,29 @@ bool RDPDrChannelServer::addSmartCardDevice(RdpDrDevice *device) {
 		device->status = STATUS_ACCESS_DENIED;
 		return false;
 	}
-	/* not implemented */
-	device->status = STATUS_NOT_SUPPORTED;
+
+	
+// 1 сначала запускаем thrift
+	SmartCardOperationsThread *scardOpThread = new SmartCardOperationsThread(this, device);
+	connect(scardOpThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
+	device->context = scardOpThread;
+	device->disabled = false;
+	scardOpThread->start();
+	
+	globalRDPDrChannelSmartCard = this;
+	globalRdpDrDeviceSmartCard = device;
+	globalSmartCardOperationsThread = scardOpThread;
+
+// 2 затем запускаем виртуальное устройство
+	// SmartCardDeviceThread *scardDevThread = new SmartCardDeviceThread();
+	// connect(scardDevThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
+	// scardDevThread->start(); 
 	return true;
 }
 
 bool RDPDrChannelServer::addDevice(RdpDrDevice *device) {
 	bool rv = true;
-
+	
 	switch (device->type)
 	{
 		case RDPDR_DTYP_FILESYSTEM:
@@ -1261,6 +1294,9 @@ bool RDPDrChannelServer::mountDevice(RdpDrDevice *device) {
 	if (!mountDir.startsWith('/') || !mountDir.endsWith('/')) {
 		CWLOG_ERR(TAG, "error: mount rule must resolve to an absolute path, starting and ending with '/'");
 		return false;
+	}
+	else{
+		CWLOG_DBG(TAG, "mount path: %s", mountDir.toStdString().c_str());
 	}
 
 	FuseThread *ft = new FuseThread(this, device, mountDir);
@@ -2287,6 +2323,215 @@ QString RDPDrChannelServer::FuseThread::toWindowsSeparators(const QString &path)
 }
 
 int RDPDrChannelServer::FuseThread::convertNtStatus(quint32 ntstatus) {
+	switch (ntstatus >> 30) {
+		case STATUS_SEVERITY_SUCCESS:		/* 0x0xxxxxxx */
+			switch(ntstatus) {
+				case STATUS_SUCCESS:                return 0;
+				case STATUS_NOTIFY_ENUM_DIR:        return 0;
+			}
+			CWLOG_WRN(TAG, "warning: unhandled success status 0x%08X", ntstatus);
+			return 0;
+
+
+		case STATUS_SEVERITY_INFORMATIONAL:	/* 0x4xxxxxxx */
+			CWLOG_WRN(TAG, "warning: unhandled informational status 0x%08X", ntstatus);
+			return 0;
+
+
+		case STATUS_SEVERITY_WARNING:		/* 0x8xxxxxxx */
+			switch(ntstatus) {
+				case (quint32)STATUS_NO_MORE_FILES:          return -ENOENT;
+				case (quint32)STATUS_DEVICE_BUSY:            return -EBUSY;
+			}
+			CWLOG_WRN(TAG, "warning: unhandled warning status 0x%08X", ntstatus);
+			return -EIO;
+
+
+		case STATUS_SEVERITY_ERROR:			/* 0xCxxxxxxx */
+			switch(ntstatus) {
+				case (quint32)STATUS_UNSUCCESSFUL:           return -EINVAL;
+				case (quint32)STATUS_DEVICE_BUSY:            return -EBUSY;
+				case (quint32)STATUS_NOT_IMPLEMENTED:        return -ENOSYS;
+				case (quint32)STATUS_INVALID_INFO_CLASS:     return -EINVAL;
+				case (quint32)STATUS_INVALID_HANDLE:         return -EBADF;
+				case (quint32)STATUS_INVALID_PARAMETER:      return -EINVAL;
+				case (quint32)STATUS_NO_SUCH_DEVICE:         return -ENODEV;
+				case (quint32)STATUS_NO_SUCH_FILE:           return -ENOENT;
+				case (quint32)STATUS_INVALID_DEVICE_REQUEST: return -EINVAL;
+				case (quint32)STATUS_END_OF_FILE:            return -ENODATA;
+				case (quint32)STATUS_ACCESS_DENIED:          return -EACCES;
+				case (quint32)STATUS_OBJECT_NAME_COLLISION:  return -EEXIST;
+				case (quint32)STATUS_SHARING_VIOLATION:      return -EBUSY;
+				case (quint32)STATUS_DISK_FULL:              return -ENOSPC;
+				case (quint32)STATUS_FILE_IS_A_DIRECTORY:    return -EISDIR;
+				case (quint32)STATUS_NOT_SUPPORTED:          return -ENOTSUP;
+				case (quint32)STATUS_FILE_CORRUPT_ERROR:     return -ETIMEDOUT;
+				case (quint32)STATUS_CANCELLED:              return -ETIMEDOUT;
+				case (quint32)STATUS_OBJECT_PATH_NOT_FOUND:  return -ENODEV;
+			}
+			CWLOG_WRN(TAG, "warning: unhandled error status 0x%08X", ntstatus);
+			return -EIO;
+
+		default:
+			CWLOG_ERR(TAG, "error mapping nstatus 0x%08X", ntstatus);
+	}
+
+	return -EIO;
+}
+
+
+//============================ SMARTCARD =====================================
+
+RDPDrChannelServer::SmartCardDeviceThread::SmartCardDeviceThread() : request(8){}
+RDPDrChannelServer::SmartCardDeviceThread::~SmartCardDeviceThread(){}
+void RDPDrChannelServer::SmartCardDeviceThread::run() {
+	QMutexLocker lock(&mScardLoopLock);	
+
+	fd = open("/dev/vusb1", O_RDWR);
+
+	int res = ioctl(fd, 0, 0);
+
+	while(1) {
+		
+		ssize_t size;
+	
+		size = read(fd, request.data(), 8);
+
+		if(!size) {
+			msleep(100); // 100 ms
+			continue;
+		}
+
+		response = GetResponse(request);
+	    
+		size = write(fd, response.data(), response.size());
+	}
+}
+
+RDPDrChannelServer::SmartCardOperationsThread::SmartCardOperationsThread(RDPDrChannelServer *pChannel, RdpDrDevice *device)
+	: QThread()
+	, mDevice(device)
+	, mVirtualChannel(pChannel)
+{}
+
+RDPDrChannelServer::SmartCardOperationsThread::~SmartCardOperationsThread() {
+	// /* Wait for the event loop thread to terminate */
+	// QMutexLocker lock(&mFuseLoopLock);
+	// /* destroy the FUSE handle, must be called after fuse_unmount */
+	// if (mFuseHandle) {
+	// 	fuse_destroy(mFuseHandle);
+	// }
+}
+
+void RDPDrChannelServer::SmartCardOperationsThread::run() {
+	QMutexLocker lock(&mScardLoopLock);
+
+	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() in !!!!!!");
+
+	// quint32 ntStatus = STATUS_SUCCESS;
+	
+	// std::shared_ptr<smartcardIOControl_Call> accessStartedCall = std::make_shared<ScardAccessStartedEvent_Call>();
+	// if ((ntStatus = createHandle(accessStartedCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", accessStartedCall->getIOctlString(false), ntStatus);
+	// }
+
+	// std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
+	// if ((ntStatus = createHandle(establishContextCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", establishContextCall->getIOctlString(false), ntStatus);
+	// }
+
+	// const char* ctxt = establishContextCall->getReturnReply().data();
+  	// quint64 *hContext = (quint64*) ctxt;
+
+	// std::shared_ptr<smartcardIOControl_Call> listReadersCall = std::make_shared<ListReaders_Call>(*hContext);
+	// if ((ntStatus = createHandle(listReadersCall))) {
+	// 	CWLOG_DBG(TAG, "send request %s failed with status 0x%08X", listReadersCall->getIOctlString(false), ntStatus);
+	// }
+	
+	// // CWLOG_INF(TAG, "ntStatus: '0x%08X'", convertNtStatus(ntStatus));
+
+	// quint32 cReaders = 1;
+	// DWORD_RPC dwTimeOut = 0xFFFFFFFF;
+	// std::vector<scard_readerstate_rpc> rgReaderStates(1);
+	
+	// std::string str = "Aladdin R.D. JaCarta [SCR Interface] (000000000000) 00 00";
+	// rgReaderStates[0].szReader = str;
+	// rgReaderStates[0].dwEventState = SCARD_STATE_UNAWARE;
+	// rgReaderStates[0].dwCurrentState = SCARD_STATE_UNAWARE;
+
+	// std::shared_ptr<GetStatusChange_Call> getStatusChange_Call = std::make_shared<GetStatusChange_Call>(*hContext, dwTimeOut, rgReaderStates, cReaders, SCARD_IOCTL_GETSTATUSCHANGEA);
+    // globalSmartCardOperationsThread->createHandle(getStatusChange_Call);
+
+	thrift_start_process();
+
+	CWLOG_DBG(TAG, "SmartCardOperationsThread::run() out !!!!!!");
+}
+
+
+quint32 RDPDrChannelServer::SmartCardOperationsThread::createHandle(std::shared_ptr<smartcardIOControl_Call> ioControlCall_ptr)
+{
+	/* See http://msdn.microsoft.com/en-us/library/bb432380(v=vs.85).aspx */
+
+	quint32 ntStatus = STATUS_UNSUCCESSFUL;
+
+	DeviceControlResponse *response = NULL;
+	DeviceControlRequest request(mDevice->id);
+	request.ioControlCode = ioControlCall_ptr->getIoControlCode();
+	request.outputBufferLength = ioControlCall_ptr->getOutputBufferLength();
+	request.buffer.append(ioControlCall_ptr->getInputBuffer());
+
+	if (!(response = (DeviceControlResponse*)mVirtualChannel->sendSynchronousDeviceRequest(request))) {
+		CWLOG_ERR(TAG, "error: createHandle failed to retrieve device response");
+		return ntStatus;
+	}
+
+	if ((ntStatus = response->ioStatus)) {
+		CWLOG_DBG(TAG, "error: createHandle failed with status 0x%08X", ntStatus);
+	}
+
+	ioControlCall_ptr->setResponse(response->buffer);
+
+	delete(response);
+	return ntStatus;
+}
+/*
+quint32 RDPDrChannelServer::SmartCardOperationsThread::closeHandle(quint32 &fileId)
+{
+	quint32 ntstatus = STATUS_UNSUCCESSFUL;
+	DeviceCloseResponse *response = NULL;
+	DeviceCloseRequest request(mDevice->id, fileId);
+
+	if (!(response = (DeviceCloseResponse*)mVirtualChannel->sendSynchronousDeviceRequest(request))) {
+		return ntstatus;
+	}
+	ntstatus = response->ioStatus;
+	delete(response);
+
+	return ntstatus;
+}
+
+int RDPDrChannelServer::SmartCardOperationsThread::templateForScardEvents_Call(quint32 ioControlCode, quint32 outBuffLength){
+	quint32 ntStatus = STATUS_SUCCESS;
+	
+	if ((ntStatus = createHandle(ioControlCode, outBuffLength)))
+	{
+		return convertNtStatus(ntStatus);
+	}
+	return convertNtStatus(ntStatus);
+}
+
+int RDPDrChannelServer::SmartCardOperationsThread::ScardAccessStartedEvent_Call(){
+
+	return templateForScardEvents_Call(SCARD_IOCTL_ACCESSSTARTEDEVENT, 256);
+}
+int RDPDrChannelServer::SmartCardOperationsThread::EstablishContext_Call(){
+//	EstablishContext_Call establishCxt();
+	
+	return templateForScardEvents_Call(SCARD_IOCTL_ESTABLISHCONTEXT, 256);
+}
+*/
+int RDPDrChannelServer::SmartCardOperationsThread::convertNtStatus(quint32 ntstatus) {
+// TODO: Переделать конвертацию для смарткарт	
 	switch (ntstatus >> 30) {
 		case STATUS_SEVERITY_SUCCESS:		/* 0x0xxxxxxx */
 			switch(ntstatus) {

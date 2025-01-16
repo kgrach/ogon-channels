@@ -1,3 +1,10 @@
+# Сборка
+
+Для генерации thrift-кода выполнить:
+
+    cd rdpdr/smartcard_driver/
+    thrift --gen c_glib ogon.thrift
+
 # Welcome to the ogon-channels repository
 
 The ogon channel repository contains code for server side RDP virtual channels like
