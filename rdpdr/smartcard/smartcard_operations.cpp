@@ -385,6 +385,19 @@ void smartcardIOControl_Call::packHcardAndDispositionCall(QByteArray& buf, const
 	offset += sizeof(call._hCard._cbHandle) + call._hCard._pbHandle.size();
 }
 
+void smartcardIOControl_Call::packContextCall(QByteArray& buf, const REDIR_SCARDCONTEXT& context, quint32& offset){
+	uint32_t 	index = 0;
+	quint32 	pbContextNdrPtr;
+
+	packRedirScardContext(buf, context, index, pbContextNdrPtr, offset);
+
+	buf << context._cbContext;
+	buf.append(context._pbContext); 
+	offset += sizeof(context._cbContext) + context._pbContext.size();
+
+
+}
+
 uint32_t smartcardIOControl_Call::unpackRedirScardContext(RdpStreamBuffer& stream, REDIR_SCARDCONTEXT& context, uint32_t& index) {
  
 	quint32 pbContextNdrPtr;
@@ -1517,6 +1530,152 @@ EndTransaction_Call::EndTransaction_Call(quint64 hCard, quint64 hContext, int64_
 }
 
 void EndTransaction_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+}
+
+//==================================== IsValidContext_Call =============================================
+IsValidContext_Call::IsValidContext_Call(quint64 hContext, quint32 ioControlCode) {
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+
+	_hContext._cbContext = sizeof(hContext); // 8 байт
+	_hContext._pbContext << hContext;
+
+	packContextCall(tmpInputBuffer, _hContext, objectBufferLength);
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void IsValidContext_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+}
+
+
+//==================================== Cancel_Call =============================================
+Cancel_Call::Cancel_Call(quint64 hContext, quint32 ioControlCode) {
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+
+	_hContext._cbContext = sizeof(hContext); // 8 байт
+	_hContext._pbContext << hContext;
+
+	packContextCall(tmpInputBuffer, _hContext, objectBufferLength);
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Cancel_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+}
+
+
+//==================================== ReleaseContext_Call =============================================
+ReleaseContext_Call::ReleaseContext_Call(quint64 hContext, quint32 ioControlCode) {
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	NdrPtr;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+
+	_hContext._cbContext = sizeof(hContext); // 8 байт
+	_hContext._pbContext << hContext;
+
+	packContextCall(tmpInputBuffer, _hContext, objectBufferLength);
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void ReleaseContext_Call::setResponse(QByteArray& buf){
 	uint32_t 	index = 0;
 	quint32 objectBufferLength;
 	quint32 ndrPtr = 0;
