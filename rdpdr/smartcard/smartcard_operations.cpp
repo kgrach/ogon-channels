@@ -1204,25 +1204,6 @@ Transmit_Call::Transmit_Call(quint64 hCard, quint64 hContext, const scard_io_req
 	// _pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
 	_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
 
-// qInfo() << "########### _pbSendBuffer = " << hex << _pbSendBuffer;	
-	
-// QByteArray tmpByteArr1;
-// tmpByteArr1.append(_pbSendBuffer);
-// qInfo() << "########### _pbSendBuffer = " << _pbSendBuffer << " (" << hex  << tmpByteArr1 << ")";	
-// QString tmp2 = QString::fromUtf8(pbSendBuffer.c_str(), pbSendBuffer.size());
-// QByteArray tmpByteArr2;
-// QByteArray tmpByteArr21;
-// tmpByteArr2.append(tmp2.toStdString().c_str(), _cbSendLength);
-// tmpByteArr21.append(tmp2.toUtf8());
-// qInfo() << "########### tmp2 = " << tmp2 << " ("  << tmpByteArr2 << ") " << tmpByteArr21;	
-// QString tmp3 = QString::fromLatin1(pbSendBuffer.c_str(), pbSendBuffer.size());
-// QByteArray tmpByteArr3;
-// QByteArray tmpByteArr31;
-// tmpByteArr3.append(tmp3.toStdString().c_str(), _cbSendLength);
-// tmpByteArr31.append(tmp3.toUtf8());
-// qInfo() << "########### tmp3 = " << tmp3 << " (" << hex << tmpByteArr3 << ") " << tmpByteArr31;
-
-
 	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
 	if( status!= SCARD_S_SUCCESS ){
 		CWLOG_WRN(TAG, "packRedirScardContext fail");
@@ -1319,6 +1300,127 @@ void Transmit_Call::setResponse(QByteArray& buf){
 	ndrRead(rsb, _response._pbRecvBuffer, _response._cbRecvLength, 1, NDR_PTR_SIMPLE);
 }
 
+
+//==================================== Control_Call =============================================
+Control_Call::Control_Call(quint64 hCard, quint64 hContext, quint64 dwControlCode, const std::string& pbSendBuffer, quint64 cbRecvLength, quint32 ioControlCode){
+	uint32_t 	index = 0;
+	quint32 	objectBufferLength = 0;
+	QByteArray 	padding;
+	quint32 	pbContextNdrPtr;
+	quint32 	pbInBufferNdrPtr = 0;
+	quint32 	pbSendBufferNdrPtr = 0;
+	quint32 	pioRecvPciNdrPtr = 0;
+	uint32_t 	status = SCARD_S_SUCCESS;
+	QByteArray 	tmpInputBuffer;
+
+	_outputBufferLength = 2048;			// [MS-RDPESC] 3.2.5.1
+	_ioControlCode = ioControlCode;
+	_hCard._cbHandle = sizeof(hCard); 	// 8 байт
+	_hCard._pbHandle << hCard;
+	_hCard._Context._cbContext = sizeof(hContext); // 8 байт
+	_hCard._Context._pbContext << hContext;
+
+	_dwControlCode = dwControlCode;
+	_cbInBufferSize = pbSendBuffer.size();
+	_pvInBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size());
+	_fpvOutBufferIsNULL = 0;
+	_cbOutBufferSize = cbRecvLength;
+	
+	
+	// _pbSendBuffer = QString::fromStdString(pbSendBuffer);
+	// _pbSendBuffer = _pbSendBuffer.leftJustified(_cbSendLength, '\0');
+//	_pbSendBuffer = QByteArray(pbSendBuffer.c_str(), pbSendBuffer.size() /*+ 1*/);
+
+// qInfo() << "########### _pbSendBuffer = " << hex << _pbSendBuffer;	
+	
+// QByteArray tmpByteArr1;
+// tmpByteArr1.append(_pbSendBuffer);
+// qInfo() << "########### _pbSendBuffer = " << _pbSendBuffer << " (" << hex  << tmpByteArr1 << ")";	
+// QString tmp2 = QString::fromUtf8(pbSendBuffer.c_str(), pbSendBuffer.size());
+// QByteArray tmpByteArr2;
+// QByteArray tmpByteArr21;
+// tmpByteArr2.append(tmp2.toStdString().c_str(), _cbSendLength);
+// tmpByteArr21.append(tmp2.toUtf8());
+// qInfo() << "########### tmp2 = " << tmp2 << " ("  << tmpByteArr2 << ") " << tmpByteArr21;	
+// QString tmp3 = QString::fromLatin1(pbSendBuffer.c_str(), pbSendBuffer.size());
+// QByteArray tmpByteArr3;
+// QByteArray tmpByteArr31;
+// tmpByteArr3.append(tmp3.toStdString().c_str(), _cbSendLength);
+// tmpByteArr31.append(tmp3.toUtf8());
+// qInfo() << "########### tmp3 = " << tmp3 << " (" << hex << tmpByteArr3 << ") " << tmpByteArr31;
+
+
+	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardContext fail");
+	}
+
+	status = packRedirScardHandle(tmpInputBuffer, _hCard, index, pbContextNdrPtr, objectBufferLength);
+	if( status!= SCARD_S_SUCCESS ){
+		CWLOG_WRN(TAG, "packRedirScardHandle fail");
+	}
+
+	tmpInputBuffer << _dwControlCode;
+	objectBufferLength += sizeof(_dwControlCode);
+
+	tmpInputBuffer << _cbInBufferSize;
+	objectBufferLength += sizeof(_cbInBufferSize);
+	ndrPointerWrite(tmpInputBuffer, index, _cbInBufferSize, pbInBufferNdrPtr, objectBufferLength); 	
+
+
+	tmpInputBuffer << _fpvOutBufferIsNULL;
+	objectBufferLength += sizeof(_fpvOutBufferIsNULL);
+
+	tmpInputBuffer << _cbOutBufferSize;
+	objectBufferLength += sizeof(_cbOutBufferSize);
+	
+	tmpInputBuffer << _hCard._Context._cbContext;
+	tmpInputBuffer << hContext; 
+	objectBufferLength += sizeof(_hCard._Context._cbContext) + _hCard._Context._pbContext.size();
+
+	tmpInputBuffer << _hCard._cbHandle;
+	tmpInputBuffer << hCard; 
+	objectBufferLength += sizeof(_hCard._cbHandle) + _hCard._pbHandle.size();
+
+	if (pbInBufferNdrPtr) {
+		ndrWrite(tmpInputBuffer, _pvInBuffer, _cbInBufferSize, 1, NDR_PTR_SIMPLE, objectBufferLength, false);
+  	}
+
+	objectBufferLength += getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH 
+				+ SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH 
+				+ objectBufferLength); 
+
+	packCommonTypeHeader(_inputBuffer);	
+	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
+	_inputBuffer.append(tmpInputBuffer);
+	_inputBuffer.append(padding); 
+}
+
+void Control_Call::setResponse(QByteArray& buf){
+	uint32_t 	index = 0;
+	quint32 objectBufferLength;
+	quint32 ndrPtr = 0;
+	RdpStreamBuffer rsb(buf);
+	rsb.sealLength(buf.size());
+
+	qint32 res = unpackCommonTypeHeader(rsb);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+	res = unpackPrivateTypeHeader(rsb, objectBufferLength);
+	if(res != SCARD_S_SUCCESS){
+		_response._returnCode = res;
+		return;
+	}
+
+	rsb >> _response._returnCode;
+
+	rsb >> _response._cbOutBufferSize;
+	ndrPointerRead(rsb, index, ndrPtr);
+
+	ndrRead(rsb, _response._pbOutBuffer, _response._cbOutBufferSize, 1, NDR_PTR_SIMPLE);
+}
 
 //==================================== Disconnect_Call =============================================
 Disconnect_Call::Disconnect_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode ){

@@ -105,7 +105,7 @@ public:
 
 class Transmit_Return{
 public:	
-	quint32 		_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	std::shared_ptr<SCardIO_Request> 	_pioRecvPci;
 	quint32 	_cbRecvLength{0};
 	QByteArray 	_pbRecvBuffer;
@@ -115,6 +115,13 @@ class Reconnect_Return{
 public:	
 	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	quint32 	_dwActiveProtocol{0};
+};
+
+class Control_Return{
+	public:	
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_cbOutBufferSize{0};
+	QByteArray 	_pbOutBuffer;
 };
 
 

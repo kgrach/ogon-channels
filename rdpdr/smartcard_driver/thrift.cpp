@@ -274,19 +274,31 @@ public:
 
   void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) {
     
-    DWORD BytesReturned;
-    std::string recvBuff;
+    // DWORD BytesReturned;
+    // std::string recvBuff;
 
-    recvBuff.resize(cbRecvLength);
+    // recvBuff.resize(cbRecvLength);
 
-    printf("Server received SCardControl: hCard=%ld, cbRecvLength=%ld\n", hCard, cbRecvLength);
+    // printf("Server received SCardControl: hCard=%ld, cbRecvLength=%ld\n", hCard, cbRecvLength);
 
-    LONG rv = SCardControl(hCard, dwControlCode, pbSendBuffer.data(), pbSendBuffer.size(),  recvBuff.data(), recvBuff.size(), &BytesReturned);
+    // LONG rv = SCardControl(hCard, dwControlCode, pbSendBuffer.data(), pbSendBuffer.size(),  recvBuff.data(), recvBuff.size(), &BytesReturned);
 
-    printf("SCardControl return %ld, BytesReturned=%ld\n", rv, BytesReturned);
+    // printf("SCardControl return %ld, BytesReturned=%ld\n", rv, BytesReturned);
 
-    _return.retValue = rv;
-    _return.pbRecvBuffer = std::string(recvBuff.data(), BytesReturned);
+    // _return.retValue = rv;
+    // _return.pbRecvBuffer = std::string(recvBuff.data(), BytesReturned);
+
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
+
+    std::shared_ptr<Control_Call> control_Call = std::make_shared<Control_Call>(hCard, hContext, dwControlCode, pbSendBuffer, cbRecvLength);
+    globalSmartCardOperationsThread->createHandle(control_Call);
+    
+    _return.retValue = control_Call->getReturnCode(); 
+    _return.pbRecvBuffer = std::string(control_Call->getReturnReply().data(), control_Call->getCbOutBufferSize());
   }
   
   LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) {

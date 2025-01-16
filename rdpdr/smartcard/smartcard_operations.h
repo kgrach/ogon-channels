@@ -260,6 +260,26 @@ public:
 	quint32 getCbRecvLength() const { return _response._cbRecvLength; }
 };
 
+class Control_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDHANDLE 	_hCard;
+	quint32 			_dwControlCode;
+	quint32 			_cbInBufferSize;
+	QByteArray 	 		_pvInBuffer;
+	quint32				_fpvOutBufferIsNULL;
+	quint32 			_cbOutBufferSize;
+
+	Control_Return		_response;
+
+public:
+	Control_Call(quint64 hCard, quint64 hContext, quint64 dwControlCode, const std::string& pbSendBuffer, quint64 cbRecvLength, quint32 ioControlCode = SCARD_IOCTL_CONTROL);
+	virtual ~Control_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._pbOutBuffer;}
+	quint32 getCbOutBufferSize() const { return _response._cbOutBufferSize; }
+};
 
 class Disconnect_Call :  public smartcardIOControl_Call {
 	
@@ -370,3 +390,5 @@ public:
 	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return QByteArray();}
 };
+
+
