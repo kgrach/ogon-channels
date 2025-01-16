@@ -88,6 +88,7 @@ protected:
 	uint32_t packRedirScardHandle(QByteArray& buf, const REDIR_SCARDHANDLE& handle, uint32_t& index, quint32& pbContextNdrPtr, quint32& offset);
 	int32_t packReaderState(QByteArray& buf, std::vector<ReaderState>& ppcReaders, quint32 cReaders, uint32_t& ptrIndex, quint32& offset, bool unicode);
 	void packHcardAndDispositionCall(QByteArray& buf, const HCardAndDisposition_Call& call, quint32& offset);
+	void packContextCall(QByteArray& buf, const REDIR_SCARDCONTEXT& context, quint32& offset);
 
 	qint32 unpackCommonTypeHeader(RdpStreamBuffer& rsBuf);
 	qint32 unpackPrivateTypeHeader(RdpStreamBuffer& rsBuf, quint32& objectBufferLength);
@@ -319,6 +320,51 @@ class EndTransaction_Call :  public smartcardIOControl_Call {
 public:
 	EndTransaction_Call(quint64 hCard, quint64 hContext, int64_t dwDisposition, quint32 ioControlCode = SCARD_IOCTL_ENDTRANSACTION);
 	virtual ~EndTransaction_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
+};
+
+class IsValidContext_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDCONTEXT 	_hContext;
+
+	Long_Return	_response;
+
+public:
+	IsValidContext_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_ISVALIDCONTEXT);
+	virtual ~IsValidContext_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
+};
+
+class Cancel_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDCONTEXT 	_hContext;
+
+	Long_Return	_response;
+
+public:
+	Cancel_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_CANCEL);
+	virtual ~Cancel_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return QByteArray();}
+};
+
+class ReleaseContext_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDCONTEXT 	_hContext;
+
+	Long_Return	_response;
+
+public:
+	ReleaseContext_Call(quint64 hContext, quint32 ioControlCode = SCARD_IOCTL_RELEASECONTEXT);
+	virtual ~ReleaseContext_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
 	quint64 getReturnCode() const override {return _response._returnCode; }

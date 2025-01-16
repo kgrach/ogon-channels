@@ -41,16 +41,19 @@ public:
   }
 
   LONG_RPC ReleaseContext(const SCARDCONTEXT_RPC hContext) {
-    // Your implementation goes here
-    printf("ReleaseContext\n");
+ 
+    std::shared_ptr<smartcardIOControl_Call> releaseContext_Call = std::make_shared<ReleaseContext_Call>(hContext);
+    globalSmartCardOperationsThread->createHandle(releaseContext_Call);
 
-    printf ("Server received SCardReleaseContext dwScope: %ld\n", hContext);
+    std::lock_guard<std::mutex> lock(mtx_);
+    std::map<SCARDHANDLE_RPC, SCARDCONTEXT_RPC>::iterator itCard2Context = Card2Context_.begin();
+    for(;itCard2Context != Card2Context_.end(); ++itCard2Context){
+      if(itCard2Context->second == hContext){
+        Card2Context_.erase(itCard2Context->first);
+      }
+    }
 
-    LONG rv = SCardReleaseContext(hContext);
-
-    printf ("SCardReleaseContext return %ld\n", rv);
-
-    return rv;
+    return releaseContext_Call->getReturnCode();
   }
 
   void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
@@ -122,18 +125,6 @@ public:
   }
 
   void Reconnect(return_r& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols, const DWORD_RPC dwInitialization) {
-    // Your implementation goes here
-    // printf("Reconnect\n");
-    // DWORD pdwActiveProtocol;
-
-    // printf ("Server received SCardReconnect: SCARDHANDLE=%ld\n", hCard);
-
-    // LONG rv = SCardReconnect(hCard, dwShareMode, dwPreferredProtocols, dwInitialization, &pdwActiveProtocol);
-
-    // printf ("SCardReconnect return %ld, Server send pdwActiveProtocol=%ld\n", rv, pdwActiveProtocol);
-
-    // _return.retValue = rv;
-    // _return.pdwActiveProtocol = pdwActiveProtocol;
 
      SCARDCONTEXT_RPC hContext;
     {
@@ -141,7 +132,7 @@ public:
       hContext = Card2Context_[hCard];
     }
 
-    std::shared_ptr<Reconnect_Call> reconnect_Call = std::make_shared<Reconnect_Call>(hCard, hContext, dwShareMode, dwPreferredProtocols, dwInitialization, SCARD_IOCTL_RECONNECT);
+    std::shared_ptr<Reconnect_Call> reconnect_Call = std::make_shared<Reconnect_Call>(hCard, hContext, dwShareMode, dwPreferredProtocols, dwInitialization);
     globalSmartCardOperationsThread->createHandle(reconnect_Call);
 
     _return.retValue = reconnect_Call->getReturnCode();
@@ -155,12 +146,8 @@ public:
       hContext = Card2Context_[hCard];
     }
 
-    std::shared_ptr<Disconnect_Call> disconnect_Call = std::make_shared<Disconnect_Call>(hCard, hContext, dwDisposition, SCARD_IOCTL_DISCONNECT);
+    std::shared_ptr<Disconnect_Call> disconnect_Call = std::make_shared<Disconnect_Call>(hCard, hContext, dwDisposition);
     globalSmartCardOperationsThread->createHandle(disconnect_Call);
-
-// пока закомментил, т.к. в PCSC_DEMO после DISCONNECT идет RECONNECT, в котором требуется context
-//    std::lock_guard<std::mutex> lock(mtx_);
-//    Card2Context_.erase(hCard);
     
     return disconnect_Call->getReturnCode();
   }
@@ -209,7 +196,7 @@ public:
       hContext = Card2Context_[hCard];
     }
 
-    std::shared_ptr<Transmit_Call> transmit_Call = std::make_shared<Transmit_Call>(hCard, hContext, pioSendPci, pbSendBuffer, pcbRecvLength, SCARD_IOCTL_TRANSMIT);
+    std::shared_ptr<Transmit_Call> transmit_Call = std::make_shared<Transmit_Call>(hCard, hContext, pioSendPci, pbSendBuffer, pcbRecvLength);
     globalSmartCardOperationsThread->createHandle(transmit_Call);
 
     scard_io_request_rpc ioRecvPciRPC;
@@ -303,15 +290,18 @@ public:
   }
   
   LONG_RPC Cancel(const SCARDCONTEXT_RPC hContext) {
-    // Your implementation goes here
-    printf("Cancel\n");
-    return SCardCancel(hContext);
+    
+    std::shared_ptr<Cancel_Call> cancel_Call = std::make_shared<Cancel_Call>(hContext);
+    globalSmartCardOperationsThread->createHandle(cancel_Call);
+    
+    return cancel_Call->getReturnCode();
   }
 
   LONG_RPC IsValidContext(const SCARDCONTEXT_RPC hContext) {
-    // Your implementation goes here
-    printf("IsValidContext\n");
-    return SCardIsValidContext(hContext);
+    std::shared_ptr<IsValidContext_Call> isValidContext_Call = std::make_shared<IsValidContext_Call>(hContext);
+    globalSmartCardOperationsThread->createHandle(isValidContext_Call);
+    
+    return isValidContext_Call->getReturnCode();
   }
 };
 
