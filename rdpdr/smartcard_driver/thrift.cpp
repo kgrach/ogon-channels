@@ -223,15 +223,32 @@ public:
   }
 
   LONG_RPC BeginTransaction(const SCARDHANDLE_RPC hCard) {
-    // Your implementation goes here
-    printf("BeginTransaction\n");
-    return SCardBeginTransaction(hCard);
+
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
+
+    std::shared_ptr<BeginTransaction_Call> beginTransaction_Call = std::make_shared<BeginTransaction_Call>(hCard, hContext);
+    globalSmartCardOperationsThread->createHandle(beginTransaction_Call);
+    
+    return beginTransaction_Call->getReturnCode();
+
   }
 
   LONG_RPC EndTransaction(const SCARDHANDLE_RPC hCard, const DWORD_RPC dwDisposition) {
-    // Your implementation goes here
-    printf("EndTransaction\n");
-    return SCardEndTransaction(hCard, dwDisposition);
+
+    SCARDCONTEXT_RPC hContext;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      hContext = Card2Context_[hCard];
+    }
+
+    std::shared_ptr<EndTransaction_Call> endTransaction_Call = std::make_shared<EndTransaction_Call>(hCard, hContext, dwDisposition);
+    globalSmartCardOperationsThread->createHandle(endTransaction_Call);
+    
+    return endTransaction_Call->getReturnCode();
   }
 
   void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) {
