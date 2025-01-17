@@ -167,8 +167,26 @@ class ListReaders_Call :  public smartcardIOControl_Call {
 	ListReaders_Return	_response;
 
 public:
-	ListReaders_Call(quint64 hContext, const std::string& readerName, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSA);
+	ListReaders_Call(quint64 hContext, const std::string& readerName, quint64 pcchReaders, quint32 ioControlCode = SCARD_IOCTL_LISTREADERSA);
 	virtual ~ListReaders_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._msz;}
+	quint32 getReturnCBytes() const {return _response._cBytes;}
+};
+
+
+class ListReaderGroups_Call :  public smartcardIOControl_Call {
+	REDIR_SCARDCONTEXT 	_hContext;
+	quint32 			_fmszGroupsIsNULL{0};
+	quint32				_cchGroups{0};
+
+	ListReaderGroups_Return	_response;
+
+public:
+	ListReaderGroups_Call(quint64 hContext, quint64 pcchGroups, quint32 ioControlCode = SCARD_IOCTL_LISTREADERGROUPSA);
+	virtual ~ListReaderGroups_Call()  noexcept = default;
 
 	void setResponse(QByteArray& buf) override;
 	quint64 getReturnCode() const override {return _response._returnCode; }
@@ -279,6 +297,25 @@ public:
 	quint64 getReturnCode() const override {return _response._returnCode; }
 	const QByteArray& getReturnReply() const override {return _response._pbOutBuffer;}
 	quint32 getCbOutBufferSize() const { return _response._cbOutBufferSize; }
+};
+
+class GetAttrib_Call :  public smartcardIOControl_Call {
+	
+	REDIR_SCARDHANDLE 	_hCard;
+	quint32 			_dwAttrId;
+	quint32				_fpbAttrIsNULL;
+	quint32 			_cbAttrLen;
+
+	GetAttrib_Return		_response;
+
+public:
+	GetAttrib_Call(quint64 hCard, quint64 hContext, quint64 dwAttrId, quint64 pcbAttrLen, quint32 ioControlCode = SCARD_IOCTL_GETATTRIB);
+	virtual ~GetAttrib_Call()  noexcept = default;
+
+	void setResponse(QByteArray& buf) override;
+	quint64 getReturnCode() const override {return _response._returnCode; }
+	const QByteArray& getReturnReply() const override {return _response._pbAttr;}
+	quint32 getCbAttrLen() const { return _response._cbAttrLen; }
 };
 
 class Disconnect_Call :  public smartcardIOControl_Call {

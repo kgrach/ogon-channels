@@ -70,43 +70,26 @@ public:
 
     // LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
 
-    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext, szReaderName, SCARD_IOCTL_LISTREADERSW);
+    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext, szReaderName, pcchReaders, SCARD_IOCTL_LISTREADERSW);
     globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
     _return.retValue = listReaders_Call->getReturnCode();
     
     _return.mszReaders = std::string(listReaders_Call->getReturnReply().data(),listReaders_Call->getReturnCBytes());
 
-    auto sizeArr = listReaders_Call->getReturnReply().size();   // 57
-    auto sizeReaders = _return.mszReaders.size();               // 59
-    auto sizeCBytes = listReaders_Call->getReturnCBytes();      // 59
+    // auto sizeArr = listReaders_Call->getReturnReply().size();   // 57
+    // auto sizeReaders = _return.mszReaders.size();               // 59
+    // auto sizeCBytes = listReaders_Call->getReturnCBytes();      // 59
 
   }
 
   void ListReaderGroups(return_lrg& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchGroups) {
-    // Your implementation goes here
-    // LPSTR szGroups = NULL;
-    // DWORD szGroupsNameLen = pcchGroups;
 
-    // std::string readerBuf;
+    std::shared_ptr<ListReaderGroups_Call> listReaderGroups_Call = std::make_shared<ListReaderGroups_Call>(hContext, pcchGroups, SCARD_IOCTL_LISTREADERGROUPSA);
+    globalSmartCardOperationsThread->createHandle(listReaderGroups_Call);
 
-    // if(SCARD_AUTOALLOCATE != szGroupsNameLen) {
-    //   readerBuf.resize(szGroupsNameLen);
-    //   szGroups = readerBuf.data();
-    // }
-
-    // printf ("Server received SCardListReaderGroups: SCARDCONTEXT=%ld\n", hContext);
-
-    // LONG rv = SCardListReaderGroups(hContext, (readerBuf.empty() ? (LPSTR)&szGroups : szGroups), &szGroupsNameLen);
-
-    // printf ("SCardListReaderGroups return %ld, Server send list groups=%s\n", rv, szGroups);
-
-    // _return.retValue = rv;
-    // _return.mszGroups = std::string(szGroups, szGroupsNameLen);
-
-    // if(SCARD_AUTOALLOCATE == pcchGroups) {
-    //   SCardFreeMemory(hContext, szGroups);
-    // }
+    _return.retValue = listReaderGroups_Call->getReturnCode();
+    _return.mszGroups = std::string(listReaderGroups_Call->getReturnReply().data(), listReaderGroups_Call->getReturnCBytes());
   }
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
@@ -239,54 +222,21 @@ public:
   }
 
   void GetAttrib(return_ga& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwAttrId, const DWORD_RPC pcbAttrLen) {
-    // Your implementation goes here
 
-    LPBYTE pAttr = NULL;
-    DWORD AttrLen = pcbAttrLen;
-
-    std::string attrBuf;
-
-    if(SCARD_AUTOALLOCATE != AttrLen) {
-
-      attrBuf.resize(AttrLen);
-      pAttr = (unsigned char*)attrBuf.data();
-    }
-
-    printf("Server received SCardGetAttrib: hCard=%ld, pcbAttrLen=%ld\n", hCard, pcbAttrLen);
-
-    LONG rv = SCardGetAttrib(hCard, dwAttrId, (attrBuf.empty() ? (LPBYTE)&pAttr : pAttr), &AttrLen);
-
-    printf("SCardGetAttrib return %ld, pAttr=%p\n", rv, pAttr);
-
-    _return.retValue = rv;
-    _return.pbAttr = std::string((char*)pAttr, AttrLen);
-
-
-    // This is code for current project only, it don't need into ogon
-    // ------------- Begin -------------
-    if(SCARD_AUTOALLOCATE == pcbAttrLen) {
+    SCARDCONTEXT_RPC hContext;
+    {
       std::lock_guard<std::mutex> lock(mtx_);
-      SCARDCONTEXT hContext = Card2Context_[hCard];
-      SCardFreeMemory(hContext, pAttr);
+      hContext = Card2Context_[hCard];
     }
-    // -------------  End  -------------
+
+    std::shared_ptr<GetAttrib_Call> getAttrib_Call = std::make_shared<GetAttrib_Call>(hCard, hContext, dwAttrId, pcbAttrLen);
+    globalSmartCardOperationsThread->createHandle(getAttrib_Call);
+    
+    _return.retValue = getAttrib_Call->getReturnCode();
+    _return.pbAttr = std::string(getAttrib_Call->getReturnReply().data(), getAttrib_Call->getCbAttrLen());
   }
 
   void Control(return_ctrl& _return, const SCARDHANDLE_RPC hCard, const DWORD_RPC dwControlCode, const LPVOID_RPC& pbSendBuffer, const DWORD_RPC cbRecvLength) {
-    
-    // DWORD BytesReturned;
-    // std::string recvBuff;
-
-    // recvBuff.resize(cbRecvLength);
-
-    // printf("Server received SCardControl: hCard=%ld, cbRecvLength=%ld\n", hCard, cbRecvLength);
-
-    // LONG rv = SCardControl(hCard, dwControlCode, pbSendBuffer.data(), pbSendBuffer.size(),  recvBuff.data(), recvBuff.size(), &BytesReturned);
-
-    // printf("SCardControl return %ld, BytesReturned=%ld\n", rv, BytesReturned);
-
-    // _return.retValue = rv;
-    // _return.pbRecvBuffer = std::string(recvBuff.data(), BytesReturned);
 
     SCARDCONTEXT_RPC hContext;
     {
