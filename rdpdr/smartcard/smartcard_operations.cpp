@@ -733,7 +733,7 @@ EstablishContext_Call::EstablishContext_Call() {
 
 	_inputBuffer << _dwScope; 	
 	_inputBuffer.append(padding); 	
-	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+	CWLOG_DBG(TAG, "out !!!!!");
 }
 
 
@@ -772,6 +772,8 @@ void EstablishContext_Call::setResponse(QByteArray& buf){
 //==================================== ListReaders_Call =============================================
 // MS-RDPESC 2.2.2.4
 ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerName, quint64 pcchReaders, quint32 ioControlCode) {
+	CWLOG_DBG(TAG, "in !!!!! readerName: '%s' pcchReaders: '%d'", readerName.c_str(), pcchReaders);
+
 	uint32_t 	index = 0;
 	quint32 	objectBufferLength = 0;
 	QByteArray 	padding;
@@ -781,14 +783,6 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerNa
 	_mszGroups = QByteArray(readerName.c_str(), readerName.size() + 2); // почему +2 пока не понятно, должно быть +1, но иначе не хватает этого байта 
 	// _mszGroups = readerName.c_str();
 	// _mszGroups = _mszGroups.leftJustified(_mszGroups.size() + 2, '\0');
-
-// QByteArray tmp((const char*) (_mszGroups.utf16()), _mszGroups.size() + 2);
-// qInfo() << "########### _mszGroups = " << hex << _mszGroups << " byteArray = " << tmp;
-// QByteArray baFromStdString = QByteArray(readerName.c_str(), readerName.size() + 2);
-// qInfo() << "########### baFromStdString = " << hex << baFromStdString;
-// auto tmpStr16 = QString(baFromStdString).utf16();
-// QByteArray baUtf16 = QByteArray((const char*)tmpStr16, _mszGroups.size() + 2);
-// qInfo() << "########### tmpStr16 = " << hex << tmpStr16 << " baUtf16 = " << hex << baUtf16;
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
@@ -837,7 +831,7 @@ ListReaders_Call::ListReaders_Call(quint64 hContext, const std::string& readerNa
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);	
 	_inputBuffer.append(padding); 	
-	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+	CWLOG_DBG(TAG, "out !!!!!");
 }
 
 void ListReaders_Call::setResponse(QByteArray& buf){
@@ -915,7 +909,7 @@ ListReaderGroups_Call::ListReaderGroups_Call(quint64 hContext, quint64 pcchGroup
 	packPrivateTypeHeader(_inputBuffer, objectBufferLength);
 	_inputBuffer.append(tmpInputBuffer);	
 	_inputBuffer.append(padding); 	
-	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+	CWLOG_DBG(TAG, "out !!!!!");
 }
 
 void ListReaderGroups_Call::setResponse(QByteArray& buf){
@@ -1017,7 +1011,7 @@ Connect_Call::Connect_Call(quint64 hContext, const std::string& szReader, int64_
 	_inputBuffer.append(tmpInputBuffer);
 	_inputBuffer.append(padding); 	
 
-	CWLOG_DBG(TAG, "_outputBufferLength: %d objectBufferLength: %ud", _outputBufferLength, objectBufferLength);
+	CWLOG_DBG(TAG, "out !!!!!");
 }
 
 void Connect_Call::setResponse(QByteArray& buf){

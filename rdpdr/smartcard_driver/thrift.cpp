@@ -4,6 +4,7 @@
 #include "gen-cpp/ogon.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/server/TSimpleServer.h>
+#include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 
@@ -58,7 +59,8 @@ public:
 
   void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
 
-    std::string szReaderName = "SCard$AllReaders";
+    // std::string szReaderName = "SCard$AllReaders";
+    LPSTR szReaderName = NULL;
     DWORD szReaderNameLen = pcchReaders;
 
     std::string readerBuf;
@@ -70,7 +72,7 @@ public:
 
     // LONG rv = SCardListReaders(hContext, NULL, (readerBuf.empty() ? (LPSTR)&szReaderName : szReaderName), &szReaderNameLen);
 
-    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext, szReaderName, pcchReaders, SCARD_IOCTL_LISTREADERSW);
+    std::shared_ptr<ListReaders_Call> listReaders_Call = std::make_shared<ListReaders_Call>(hContext, szReaderName, pcchReaders, SCARD_IOCTL_LISTREADERSA);
     globalSmartCardOperationsThread->createHandle(listReaders_Call);
 
     _return.retValue = listReaders_Call->getReturnCode();
@@ -94,7 +96,7 @@ public:
 
   void Connect(return_c& _return, const SCARDCONTEXT_RPC hContext, const LPCSTR_RPC& szReader, const DWORD_RPC dwShareMode, const DWORD_RPC dwPreferredProtocols) {
 
-    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTW);
+    std::shared_ptr<Connect_Call> connect_Call = std::make_shared<Connect_Call>(hContext, szReader, dwShareMode, dwPreferredProtocols, SCARD_IOCTL_CONNECTA);
     globalSmartCardOperationsThread->createHandle(connect_Call);
 
     _return.retValue = connect_Call->getReturnCode();
@@ -275,7 +277,7 @@ void thrift_start_process() {
   ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
   ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
-  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
+  TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
   try{
     server.serve();
   }catch(...){
