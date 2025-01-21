@@ -59,8 +59,8 @@ public:
 
   void ListReaders(return_lr& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC pcchReaders) {
 
-    // std::string szReaderName = "SCard$AllReaders";
-    LPSTR szReaderName = NULL;
+    std::string szReaderName = "SCard$AllReaders";
+    // LPSTR szReaderName = NULL;
     DWORD szReaderNameLen = pcchReaders;
 
     std::string readerBuf;
