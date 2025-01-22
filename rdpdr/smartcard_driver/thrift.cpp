@@ -277,7 +277,7 @@ void thrift_start_process() {
   ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
   ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
-  TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
+  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   try{
     server.serve();
   }catch(...){
