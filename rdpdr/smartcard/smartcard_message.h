@@ -38,13 +38,13 @@ struct longAndMultiString_Return
 	QByteArray 	_msz;
 };
 
+typedef longAndMultiString_Return ListReaders_Return, ListReaderGroups_Return;
+
 struct EstablishContext_Return
 {	
 	quint32 				_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	REDIR_SCARDCONTEXT 	_hContext;
 }; 
-
-typedef longAndMultiString_Return ListReaders_Return;
 
 class SCardIO_Request{
 public:
@@ -105,7 +105,7 @@ public:
 
 class Transmit_Return{
 public:	
-	quint32 		_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
 	std::shared_ptr<SCardIO_Request> 	_pioRecvPci;
 	quint32 	_cbRecvLength{0};
 	QByteArray 	_pbRecvBuffer;
@@ -117,6 +117,19 @@ public:
 	quint32 	_dwActiveProtocol{0};
 };
 
+class Control_Return{
+	public:	
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_cbOutBufferSize{0};
+	QByteArray 	_pbOutBuffer;
+};
+
+class GetAttrib_Return{
+	public:	
+	quint32 	_returnCode{0x80100001}; // SCARD_F_INTERNAL_ERROR
+	quint32 	_cbAttrLen{0};
+	QByteArray 	_pbAttr;
+};
 
 // ===================== calls ========================
 class HCardAndDisposition_Call{
