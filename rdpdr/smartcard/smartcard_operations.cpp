@@ -1163,6 +1163,8 @@ Status_Call::Status_Call(quint64 hCard, quint64 hContext, int64_t cchReaderLen, 
 	uint32_t 	status = SCARD_S_SUCCESS;
 	QByteArray 	tmpInputBuffer;
 
+	_fmszReaderNamesIsNULL = cchReaderLen > 0 && cchReaderLen != -1 ? 0 : 1;
+
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	_ioControlCode = ioControlCode;
 	_cchReaderLen = cchReaderLen;
