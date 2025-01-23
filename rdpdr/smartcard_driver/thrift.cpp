@@ -31,7 +31,7 @@ public:
   }
 
   void EstablishContext(return_ec& _return, const DWORD_RPC dwScope) {
-    std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>();
+    std::shared_ptr<smartcardIOControl_Call> establishContextCall = std::make_shared<EstablishContext_Call>(dwScope);
     globalSmartCardOperationsThread->createHandle(establishContextCall);
 
     const char* ctxt = establishContextCall->getReturnReply().data();
@@ -45,12 +45,13 @@ public:
  
     std::shared_ptr<smartcardIOControl_Call> releaseContext_Call = std::make_shared<ReleaseContext_Call>(hContext);
     globalSmartCardOperationsThread->createHandle(releaseContext_Call);
-
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::map<SCARDHANDLE_RPC, SCARDCONTEXT_RPC>::iterator itCard2Context = Card2Context_.begin();
-    for(;itCard2Context != Card2Context_.end(); ++itCard2Context){
-      if(itCard2Context->second == hContext){
-        Card2Context_.erase(itCard2Context->first);
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      std::map<SCARDHANDLE_RPC, SCARDCONTEXT_RPC>::iterator itCard2Context = Card2Context_.begin();
+      for(;itCard2Context != Card2Context_.end(); ++itCard2Context){
+        if(itCard2Context->second == hContext){
+          Card2Context_.erase(itCard2Context->first);
+        }
       }
     }
 
@@ -150,9 +151,10 @@ public:
 
     _return.retValue = status_Call->getReturnCode();
     _return.szReaderName = std::string(status_Call->getReaderNames().data(), status_Call->getReaderNames().size());
+
     _return.pdwState = status_Call->getDwState();
     _return.pdwProtocol = status_Call->getDwProtocol();
-    _return.pbAtr = std::string(status_Call->getReturnReply().data(), status_Call->getReturnReply().size());
+    _return.pbAtr = std::string(status_Call->getReturnReply().data(), status_Call->getCbAtrLen());
   }
 
   void GetStatusChange(return_gsc& _return, const SCARDCONTEXT_RPC hContext, const DWORD_RPC dwTimeout, const std::vector<scard_readerstate_rpc> & rgReaderStates, const DWORD_RPC cReaders) {
@@ -277,8 +279,8 @@ void thrift_start_process() {
   ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
   ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
-  //TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
+//  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   try{
     server.serve();
   }catch(...){
