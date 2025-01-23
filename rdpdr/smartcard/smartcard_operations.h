@@ -149,7 +149,7 @@ class EstablishContext_Call : public smartcardIOControl_Call
 	EstablishContext_Return _response;
 
 public:
-	EstablishContext_Call();
+	EstablishContext_Call(quint64 dwScope);
 	virtual ~EstablishContext_Call() noexcept = default;
 	void setResponse(QByteArray& buf) override;
 	quint64 getReturnCode() const override {return _response._returnCode; }
@@ -253,6 +253,7 @@ public:
 	const QByteArray& getReaderNames() const {return _response._mszReaderNames;}
 	quint32 getDwState() {return _response._dwState;}
 	quint32 getDwProtocol() {return _response._dwProtocol;}
+	quint32 getCbAtrLen() {return _response._cbAtrLen;}
 };
 
 class Transmit_Call :  public smartcardIOControl_Call {

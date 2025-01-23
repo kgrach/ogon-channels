@@ -719,11 +719,12 @@ ScardAccessStartedEvent_Call::ScardAccessStartedEvent_Call() {
 }
 
 //==================================== EstablishContext_Call =============================================
-EstablishContext_Call::EstablishContext_Call() {
+EstablishContext_Call::EstablishContext_Call(quint64 dwScope) {
 	quint32 objectBufferLength = 0;
 	QByteArray padding;
 	_ioControlCode = SCARD_IOCTL_ESTABLISHCONTEXT;
-	_dwScope = SCARD_SCOPE_SYSTEM; /* комментарий из freeRDP: SCARD_SCOPE_SYSTEM is the only scope supported by pcsc-lite */
+	// _dwScope = SCARD_SCOPE_SYSTEM; /* комментарий из freeRDP: SCARD_SCOPE_SYSTEM is the only scope supported by pcsc-lite */
+	_dwScope = dwScope;
 
 	_outputBufferLength = 2048;	// [MS-RDPESC] 3.2.5.1
 	objectBufferLength = sizeof(_dwScope) +	getPadding(padding, SMARTCARD_COMMON_TYPE_HEADER_LENGTH + SMARTCARD_PRIVATE_TYPE_HEADER_LENGTH + sizeof(_dwScope));
@@ -1171,6 +1172,7 @@ Status_Call::Status_Call(quint64 hCard, quint64 hContext, int64_t cchReaderLen, 
 	_hCard._pbHandle << hCard;
 	_hCard._Context._cbContext = sizeof(hContext); // 8 байт
 	_hCard._Context._pbContext << hContext;
+	_fmszReaderNamesIsNULL = cchReaderLen > 0 && cchReaderLen != -1 ? 0 : 1;
 
 	status = packRedirScardContext(tmpInputBuffer, _hCard._Context, index, pbContextNdrPtr, objectBufferLength);
 	if( status!= SCARD_S_SUCCESS ){
