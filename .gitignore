@@ -9,3 +9,4 @@ moc_*.cpp
 *.pc
 *.so*
 out/
+build/

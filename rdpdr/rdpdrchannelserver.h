@@ -2525,23 +2525,6 @@ public:
 
 	};
 
-
-	// Создание и управление USB-устройством в файловой системе
-	class SmartCardDeviceThread : public QThread {
-	private:
-		int fd;
-		std::vector<unsigned char> request;
-		std::vector<unsigned char> response;
-		QMutex              mScardLoopLock;
-//		QMutex              mIoLock;
-
-		void run();
-
-	public:
-		SmartCardDeviceThread();
-		~SmartCardDeviceThread();
-	};
-
 	bool mountDevice(RdpDrDevice* device);
 
 private slots:

@@ -28,7 +28,7 @@
 #include <QMutexLocker>
 #include <QtEndian>
 #include <sys/ioctl.h>
-#include "smartcard_driver/UsbConfig.h"
+
 #include "smartcard_driver/thrift.h"
 #include "rdpdrchannelserver.h"
 #include "global_vars.h"
@@ -1110,10 +1110,6 @@ bool RDPDrChannelServer::addSmartCardDevice(RdpDrDevice *device) {
 	globalRdpDrDeviceSmartCard = device;
 	globalSmartCardOperationsThread = scardOpThread;
 
-// 2 затем запускаем виртуальное устройство
-	// SmartCardDeviceThread *scardDevThread = new SmartCardDeviceThread();
-	// connect(scardDevThread, SIGNAL(finished()), this, SLOT(deviceContextStopped()));
-	// scardDevThread->start(); 
 	return true;
 }
 
@@ -2381,32 +2377,6 @@ int RDPDrChannelServer::FuseThread::convertNtStatus(quint32 ntstatus) {
 
 
 //============================ SMARTCARD =====================================
-
-RDPDrChannelServer::SmartCardDeviceThread::SmartCardDeviceThread() : request(8){}
-RDPDrChannelServer::SmartCardDeviceThread::~SmartCardDeviceThread(){}
-void RDPDrChannelServer::SmartCardDeviceThread::run() {
-	QMutexLocker lock(&mScardLoopLock);	
-
-	fd = open("/dev/vusb1", O_RDWR);
-
-	int res = ioctl(fd, 0, 0);
-
-	while(1) {
-		
-		ssize_t size;
-	
-		size = read(fd, request.data(), 8);
-
-		if(!size) {
-			msleep(100); // 100 ms
-			continue;
-		}
-
-		response = GetResponse(request);
-	    
-		size = write(fd, response.data(), response.size());
-	}
-}
 
 RDPDrChannelServer::SmartCardOperationsThread::SmartCardOperationsThread(RDPDrChannelServer *pChannel, RdpDrDevice *device)
 	: QThread()

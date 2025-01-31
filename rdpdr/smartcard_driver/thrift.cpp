@@ -8,6 +8,8 @@
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 
+#include "ThriftPortController.hpp"
+
 using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
 using namespace ::apache::thrift::transport;
@@ -271,20 +273,34 @@ public:
   }
 };
 
-void thrift_start_process() {
-  int port = 9092;
-  ::std::shared_ptr<ogonHandler> handler(new ogonHandler());
-  ::std::shared_ptr<TProcessor> processor(new ogonProcessor(handler));
-  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+#include <chrono>
+using namespace std::chrono_literals;
 
-  TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
-//  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
-  try{
-    server.serve();
-  }catch(...){
-    std::cout << "here";
+void thrift_start_process() {
+
+  int port = 9092,
+      port_max = port + 50;
+
+
+  while(port < port_max) {
+
+    ::std::shared_ptr<ogonHandler> handler(new ogonHandler());
+    ::std::shared_ptr<TProcessor> processor(new ogonProcessor(handler));
+    ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+    ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+    ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+
+    TThreadedServer server(processor, serverTransport, transportFactory, protocolFactory);
+
+    try{
+      ThriftPortController portCtrl(port);
+      server.serve();
+      break;
+    }catch(std::exception& e) {
+      CWLOG_DBG(TAG, "Thrift can't listen port %d. Exception: %s", port, e.what());
+      port++;
+    }
   }
+
 }
 
